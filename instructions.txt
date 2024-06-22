@@ -1,0 +1,27 @@
+source minsirenv/bin/activate
+pip install --upgrade pip
+
+pip install --upgrade pip
+
+
+find . -path "*/migrations/*.py" -not -name "__init__.py" -delete
+find . -path "*/migrations/*.pyc"  -delete
+find . -path "*/__pycache__/*.pyc"  -delete
+
+rm -rf minsirenv
+
+psql -U minsiradmin -d minsirdb
+psql -U mirbilal -d postgres
+sudo -u postgres psql
+
+DROP DATABASE minsirdb;
+DROP USER minsiradmin;
+
+CREATE DATABASE minsirdb;
+CREATE USER minsiradmin WITH PASSWORD 'i4n6s9l1y';
+ALTER ROLE minsiradmin SET client_encoding TO 'utf8';
+ALTER ROLE minsiradmin SET default_transaction_isolation TO 'read committed';
+ALTER ROLE minsiradmin SET timezone TO 'UTC';
+GRANT ALL PRIVILEGES ON DATABASE minsirdb TO minsiradmin;
+ALTER USER minsiradmin WITH SUPERUSER;
+
