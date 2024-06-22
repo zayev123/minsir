@@ -25,3 +25,16 @@ ALTER ROLE minsiradmin SET timezone TO 'UTC';
 GRANT ALL PRIVILEGES ON DATABASE minsirdb TO minsiradmin;
 ALTER USER minsiradmin WITH SUPERUSER;
 
+
+https://github.com/zayev123/minsir.git
+git remote set-url origin https://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@github.com/zayev123/minsir.git
+
+pip cache purge
+
+pip freeze > requirements.txt
+pip install -r requirements.txt
+
+git rm -rf --cached .
+git add .
+
+
