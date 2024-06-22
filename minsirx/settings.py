@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'apps.client_manager',
     'apps.risk_manager',
     'apps.claim_manager',
+    'apps.email_manager',
 ]
 
 MIDDLEWARE = [
