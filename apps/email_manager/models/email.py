@@ -6,6 +6,7 @@ from apps.risk_manager.models.risk import Risk
 class EmailData(models.Model):
     from_email = models.CharField(max_length=255)
     to_emails = ArrayField(models.CharField(max_length=255), blank=True, default=list)
+    date = models.DateTimeField(null=True)
     subject = models.TextField(blank=True, null=True)
     body = models.TextField(blank=True, null=True)
 

@@ -4,8 +4,8 @@ from apps.email_manager.models.email import EmailAttachment, EmailData
 
 @admin.register(EmailData)
 class EmailDataAdmin(admin.ModelAdmin):
-    list_display = ['id', 'from_email', 'subject', 'to_emails']
-    search_fields = ['id', 'from_email', 'subject', 'to_emails']
+    list_display = ['id', 'from_email', 'subject', 'to_emails', 'date']
+    search_fields = ['id', 'from_email', 'subject', 'to_emails', 'date']
 
 @admin.register(EmailAttachment)
 class EmailAttachmentAdmin(admin.ModelAdmin):
