@@ -14,7 +14,7 @@ class EmailData(models.Model):
         return self.subject
 
     class Meta:
-        # ordering = ['-date']
+        ordering = ['-date']
         verbose_name_plural = "       Emails Data"
         db_table = 'emails'
 
