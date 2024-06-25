@@ -34,7 +34,12 @@ pip cache purge
 pip freeze > requirements.txt
 pip install -r requirements.txt
 
+pip uninstall -r requirements.txt -y
+
 git rm -rf --cached .
 git add .
+
+
+ngrok tcp 5432
 
 

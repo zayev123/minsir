@@ -6,7 +6,7 @@ from apps.risk_manager.models.commission_realized import CommissionRealized
 from apps.risk_manager.models.endorsement import Endorsement
 from apps.risk_manager.models.important_clause import ImportantClause
 from apps.risk_manager.models.insurance_line import InsuranceLine
-from apps.risk_manager.models.policy import Policy
+from apps.risk_manager.models.policy import Policy, PolicyFile
 from apps.risk_manager.models.premium_credited import PremiumCredited
 from apps.risk_manager.models.premium_debited import PremiumDebited
 from apps.risk_manager.models.quotation import Quotation
@@ -45,8 +45,13 @@ class InsuranceLineAdmin(admin.ModelAdmin):
 
 @admin.register(Policy)
 class PolicyAdmin(admin.ModelAdmin):
-    list_display = ['id', 'risk', 'issue_date']
-    search_fields = ['id', 'issue_date']
+    list_display = ['id', 'risk', 'issue_date', 'number']
+    search_fields = ['id', 'issue_date', 'number']
+
+@admin.register(PolicyFile)
+class PolicyFileAdmin(admin.ModelAdmin):
+    list_display = ['id', 'policy', 'name']
+    search_fields = ['id', 'policy__number', 'name']
 
 @admin.register(PremiumCredited)
 class PremiumCreditedAdmin(admin.ModelAdmin):

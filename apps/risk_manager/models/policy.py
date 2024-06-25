@@ -20,3 +20,16 @@ class Policy(models.Model):
         ordering = ['-issue_date']
         verbose_name_plural = "       Policies"
         db_table = 'policies'
+
+class PolicyFile(models.Model):
+    policy = models.ForeignKey(Policy, related_name='files', on_delete=models.CASCADE, null=True, blank=True)
+    name = models.CharField(max_length=255)
+    file = models.FileField(upload_to='policy_files/')
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        # ordering = ['-date']
+        verbose_name_plural = "       Policy Files"
+        db_table = 'policy_files'
