@@ -4,6 +4,8 @@ from apps.email_manager.models import EmailData
 import re
 
 from apps.email_manager.models.email import EmailAttachment
+from os import path
+from django.db.models import Q
 # what is the longest length of convo
 # how to extract one conversations from the data
 
@@ -22,6 +24,7 @@ class EmailConvo:
         )
         self.head_email_node = email_node
         self.tail_email_node = email_node
+        self.root_dir = "/Users/mirbilal/Desktop/minsir/"
     
     def append_email_node_to_convo(self, new_email):
         next_node = EmailNode(
@@ -173,7 +176,8 @@ class EmailConvo:
             attachments: list[EmailAttachment] = email_data.attachments.all()
             for an_attchmnt in attachments:
                 if an_attchmnt.name is not None:
-                    attachments_dict[an_attchmnt.id] = an_attchmnt
+                    relative_path = an_attchmnt.file.url.lstrip('/')
+                    attachments_dict[an_attchmnt.id] = path.join(self.root_dir, relative_path)
 
 
             if next_email is not None:
@@ -189,7 +193,7 @@ class EmailConvo:
 
 
 class ConversationReader:
-    def __init__(self):
+    def __init__(self, start_date, end_date):
         self.conversations = {}
         self.latest_subjects = {}
         self.re_list = [
@@ -205,9 +209,14 @@ class ConversationReader:
             "Fwd: ",
             "fwd: "
         ]
+        self.start_date = start_date
+        self.end_date = end_date
 
     def extract_conversation(self):
-        emails = EmailData.objects.order_by('date').prefetch_related("attachments").all()[0:1500]
+        emails = EmailData.objects.filter(
+            Q(date__gte = self.start_date)
+            &Q(date__lte = self.end_date)
+        ).order_by('date').prefetch_related("attachments")
         for an_email in emails:
             email_date = an_email.date
             if an_email.subject and email_date:

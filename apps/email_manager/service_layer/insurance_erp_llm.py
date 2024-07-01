@@ -25,7 +25,7 @@ class InsuranceERPLLM:
         self.num_of_choices = 3
 
         self.queries = {
-            "net_premium": "What is the net premium amount?",
+            "net_premium": "What is the net premium amount? It wll usually be the last value of a breakdown",
             "issue_date": "What is the starting date of the coverage period?",
             "covernote_number": "What is the cover note number which starts with 'COV'? Rule: It must start with 'COV'",
             "policy_number": "What is the policy number which starts with 'PL'? Rule: It must start with 'PL'"
