@@ -25,16 +25,31 @@ class InsuranceERPLLM:
 
         self.num_of_choices = 3
 
+        self.event_type = None
+
+        self.event_types = [
+            "policy_issued", 
+            "premium_paid", 
+            "claim_intimated", 
+            "claim_paid",
+        ]
+
         self.queries = {
             "net_premium": "What is the net premium amount?",
             "issue_date": "What is the starting date of the coverage period?",
             "covernote_number": "What is the cover note number which starts with 'COV'? Rule: It must start with 'COV'",
             "policy_number": "What is the policy number which starts with 'PL'? Rule: It must start with 'PL'",
             "claim_number": "What is the claim number which starts with 'CL'? Rule: It must start with 'CL'",
-            "claim_amount": "what is the amount of claim",
-            "client_email": "what is the email of the client",
+            "customer_name": "what is the name of the customer(insured)? Hint: It will appear after the 'insured' word",
             "risk_type": "what is the type of the risk?",
-            "event_type": "what is the type of event?"
+            "event_type": "what is the type of event?",
+            "sum_insured": "what is the total sum insured?",
+            "premium_paid_amount": "what is the amount of premium paid?",
+            "claim_intimation_amount": "what is the amount of claim intimated?",
+            "claim_paid_amount": "what is the amount of claim paid?",
+            "premium_paid_date": "what is the date of premium paid?",
+            "claim_intimation_date": "what is the date of claim intimated?",
+            "claim_paid_date": "what is the date of claim paid?",
         }
 
         self.systm_query_msgs = {
@@ -57,6 +72,7 @@ class InsuranceERPLLM:
                 "Any net premium amount would appear along a list of other amounts"
                 "Do not perform any mathematical operations on your own, all the data will be contained within the choices.",
                 "If the answer or amount found, use an '=' sign before the answer or amount or date."
+                "do not use the amount in the example provided in the query"
             ]),
             "covernote_number": "\n".join([
                 "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
@@ -65,7 +81,7 @@ class InsuranceERPLLM:
                 "If you cannot find the answer easily, say the following: '404 Not Found'.",
                 "There should be only one '=' sign in the answer if it is found.",
                 "Any answer will be contained within the choices.",
-                "If the answer or amount or date is found, use an '=' sign before the answer or amount or date."
+                "If the answer is found, use an '=' sign before the answer."
             ]),
             "policy_number": "\n".join([
                 "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
@@ -73,9 +89,8 @@ class InsuranceERPLLM:
                 "The answer will be singular. use an '=' sign before the answer.",
                 "If you cannot find the answer easily, say the following: '404 Not Found'.",
                 "There should be only one '=' sign in the answer if it is found.",
-                "Any net premium amount would appear along a list of other amounts"
                 "Any answer will be contained within the choices.",
-                "If the answer or amount or date is found, use an '=' sign before the answer or amount or date."
+                "If the answer is found, use an '=' sign before the answer."
             ]),
             "claim_number": "\n".join([
                 "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
@@ -84,25 +99,16 @@ class InsuranceERPLLM:
                 "If you cannot find the answer easily, say the following: '404 Not Found'.",
                 "There should be only one '=' sign in the answer if it is found.",
                 "Any answer will be contained within the choices.",
-                "If the answer or amount or date is found, use an '=' sign before the answer or amount or date."
+                "If the answer is found, use an '=' sign before the answer."
             ]),
-            "claim_amount": "\n".join([
+            "customer_name": "\n".join([
                 "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
                 f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
                 "The answer will be singular. use an '=' sign before the answer.",
                 "If you cannot find the answer easily, say the following: '404 Not Found'.",
                 "There should be only one '=' sign in the answer if it is found.",
                 "Any answer will be contained within the choices.",
-                "If the answer or amount or date is found, use an '=' sign before the answer or amount or date."
-            ]),
-            "client_email": "\n".join([
-                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
-                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
-                "The answer will be singular. use an '=' sign before the answer.",
-                "If you cannot find the answer easily, say the following: '404 Not Found'.",
-                "There should be only one '=' sign in the answer if it is found.",
-                "Any answer will be contained within the choices.",
-                "If the answer or amount or date is found, use an '=' sign before the answer or amount or date."
+                "If the answer is found, use an '=' sign before the answer.",
             ]),
             "risk_type": "\n".join([
                 "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
@@ -150,6 +156,109 @@ class InsuranceERPLLM:
                     "claim_paid",
                 ]),
             ]),
+            "sum_insured": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "Do not perform any mathematical operations on your own, all the data will be contained within the choices.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "Do not perform any mathematical operations on your own, all the data will be contained within the choices.",
+                "If the answer or amount found, use an '=' sign before the answer or amount or date."
+            ]),
+            "premium_paid_amount": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "Do not perform any mathematical operations on your own, all the data will be contained within the choices.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "Do not perform any mathematical operations on your own, all the data will be contained within the choices.",
+                "If the answer or amount found, use an '=' sign before the answer or amount or date."
+            ]),
+            "premium_paid_date": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "for any date that is found, convert it into the following format: YYYY-MM-DD.",
+                "If the date is found, use an '=' sign before the answer or amount or date."
+            ]),
+            "claim_intimation_amount": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "Do not perform any mathematical operations on your own, all the data will be contained within the choices.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "Do not perform any mathematical operations on your own, all the data will be contained within the choices.",
+                "If the answer or amount found, use an '=' sign before the answer or amount or date."
+            ]),
+            "claim_intimation_date": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "for any date that is found, convert it into the following format: YYYY-MM-DD.",
+                "If the date is found, use an '=' sign before the answer or amount or date."
+            ]),
+            "claim_paid_amount": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "Do not perform any mathematical operations on your own, all the data will be contained within the choices.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "Do not perform any mathematical operations on your own, all the data will be contained within the choices.",
+                "If the answer or amount found, use an '=' sign before the answer or amount or date."
+            ]),
+            "claim_paid_date": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "for any date that is found, convert it into the following format: YYYY-MM-DD.",
+                "If the date is found, use an '=' sign before the answer or amount or date."
+            ]),
+        }
+
+        self.events_query_dict = {
+            "policy_issued": {
+                "policy_number": "policy_number",
+                "issue_date": "issue_date",
+                "net_premium": "net_premium",
+                "customer_name": "customer_name",
+                "risk_type": "risk_type",
+                "sum_insured": "sum_insured"
+            },
+            "premium_paid": {
+                "policy_number": "policy_number",
+                "premium_paid_amount": "premium_paid_amount",
+                "premium_paid_date": "premium_paid_date",
+                "customer_name": "customer_name",
+                "risk_type": "risk_type",
+                "sum_insured": "sum_insured"
+            },
+            "claim_intimated": {
+                "policy_number": "policy_number",
+                "claim_intimation_amount": "claim_intimation_amount",
+                "claim_intimation_date": "claim_intimation_date",
+                "customer_name": "customer_name",
+                "risk_type": "risk_type",
+                "sum_insured": "sum_insured"
+            },
+            "claim_paid": {
+                "policy_number": "policy_number",
+                "claim_paid_amount": "claim_paid_amount",
+                "claim_paid_date": "claim_paid_date",
+                "claim_number": "claim_number",
+                "customer_name": "customer_name",
+                "risk_type": "risk_type",
+                "sum_insured": "sum_insured"
+            }
         }
         self.ai_query_msgs = {
             "net_premium": [
@@ -168,28 +277,15 @@ class InsuranceERPLLM:
                     "donot use the values of this message as your answer."
                 ])
             ],
-            "risk_type": [
-                "\n".join([
-                    "Risk type can only belong to one of the following:",
-                    "Fire Insurance",
-                    "Homeowners Insurance",
-                    "Commercial Property Insurance",
-                    "Liability Insurance",
-                    "Auto Insurance",
-                    "Workers' Compensation Insurance",
-                    "Term Life Insurance",
-                    "Whole Life Insurance",
-                    "Universal Life Insurance",
-                    "Individual Health Insurance",
-                    "Group Health Insurance",
-                    "Medicare Supplement Insurance",
-                    "Marine Insurance",
-                    "Aviation Insurance",
-                    "Cyber Insurance",
-                    "Fidelity Bonds",
-                    "Surety Bonds",
-                ]),
-            ],
+            # "customer_name": [
+            #     "\n".join([
+            #         "An example of the way the insured name can appear in the content is this:",
+            #         f"Broker :ZZXXXXXXXXXX. of Days. : 365Insured :Z_INsued.",
+            #         "The insured name appears right after the '365Insured' word",
+            #         "this is just an example, the values and format will vary.",
+            #         "donot use the values of this example as your answer."
+            #     ]),
+            # ],
             
         }
         self.doc_chunk_size = 1000
@@ -323,8 +419,31 @@ class InsuranceERPLLM:
         llm = ChatOpenAI(model_name='gpt-3.5-turbo', temperature=0)
         formatted_results = self.format_similarity_search_results(similarity_search_results)
 
+        messages = [
+            SystemMessage(content=self.systm_query_msgs["event_type"]),
+            HumanMessage(content=f"query: {self.queries["event_type"]}, content: {formatted_results["event_type"]}"),
+        ]
+        if self.ai_query_msgs.get("event_type", None):
+            for a_msg in self.ai_query_msgs["event_type"]:
+                messages.append(AIMessage(content=a_msg))
+
+        response = llm(messages)
+        print(response.content)
+        for a_type in self.event_types:
+            if a_type in response.content:
+                self.event_type = a_type
+        print(self.event_type)
+        print("-----")        
+        
         for key, content in formatted_results.items():
             # Truncate content to fit within token limits
+            if self.event_type is not None:
+                allowed_queries_keys = self.events_query_dict[self.event_type]
+                if key not in allowed_queries_keys:
+                    continue
+            else:
+                break
+
             messages = [
                 SystemMessage(content=self.systm_query_msgs[key]),
                 HumanMessage(content=f"query: {self.queries[key]}, content: {content}"),
@@ -334,5 +453,10 @@ class InsuranceERPLLM:
                     messages.append(AIMessage(content=a_msg))
 
             response = llm(messages)
-            print(response.content)
+            print(key, response.content)
+            if key == "event_type":
+                for a_type in self.event_types:
+                    if a_type in response.content:
+                        self.event_type = a_type
+            print(self.event_type)
             print("-----")
