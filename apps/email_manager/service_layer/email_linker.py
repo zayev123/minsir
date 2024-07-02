@@ -186,6 +186,7 @@ class EmailConvo:
             else:
                 return None
         _get_full_convo(first_email)
+        
         return (full_convo, list(attachments_dict.values()))
     
 # if it is of the form re, but before the re, there is one without the re, then split

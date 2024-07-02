@@ -29,21 +29,13 @@ class InsuranceERPLLM:
             "net_premium": "What is the net premium amount?",
             "issue_date": "What is the starting date of the coverage period?",
             "covernote_number": "What is the cover note number which starts with 'COV'? Rule: It must start with 'COV'",
-            "policy_number": "What is the policy number which starts with 'PL'? Rule: It must start with 'PL'"
+            "policy_number": "What is the policy number which starts with 'PL'? Rule: It must start with 'PL'",
+            "claim_number": "What is the claim number which starts with 'CL'? Rule: It must start with 'CL'",
+            "claim_amount": "what is the amount of claim",
+            "client_email": "what is the email of the client",
+            "risk_type": "what is the type of the risk?",
+            "event_type": "what is the type of event?"
         }
-
-        systm_msgs = [
-            "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
-            f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
-            "Do not perform any mathematical operations on your own, all the data will be contained within the choices.",
-            "The answer will be singular. use an '=' sign before the answer.",
-            "If you cannot find the answer easily, say the following: '404 Not Found'.",
-            "There should be only one '=' sign in the answer if it is found.",
-            "for any date that is found, convert it into the following format: YYYY-MM-DD.",
-            "Any net premium amount would appear along a list of other amounts"
-            "Do not perform any mathematical operations on your own, all the data will be contained within the choices.",
-            "If the answer or amount or date is found, use an '=' sign before the answer or amount or date."
-        ]
 
         self.systm_query_msgs = {
             "issue_date": "\n".join([
@@ -85,6 +77,79 @@ class InsuranceERPLLM:
                 "Any answer will be contained within the choices.",
                 "If the answer or amount or date is found, use an '=' sign before the answer or amount or date."
             ]),
+            "claim_number": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "Any answer will be contained within the choices.",
+                "If the answer or amount or date is found, use an '=' sign before the answer or amount or date."
+            ]),
+            "claim_amount": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "Any answer will be contained within the choices.",
+                "If the answer or amount or date is found, use an '=' sign before the answer or amount or date."
+            ]),
+            "client_email": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "Any answer will be contained within the choices.",
+                "If the answer or amount or date is found, use an '=' sign before the answer or amount or date."
+            ]),
+            "risk_type": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "Any answer will be contained within the choices.",
+                "If the answer or amount or date is found, use an '=' sign before the answer or amount or date."
+                "\n".join([
+                    "Risk type can only belong to one of the following:",
+                    "Fire Insurance",
+                    "Homeowners Insurance",
+                    "Commercial Property Insurance",
+                    "Liability Insurance",
+                    "Auto Insurance",
+                    "Workers' Compensation Insurance",
+                    "Term Life Insurance",
+                    "Whole Life Insurance",
+                    "Universal Life Insurance",
+                    "Individual Health Insurance",
+                    "Group Health Insurance",
+                    "Medicare Supplement Insurance",
+                    "Marine Insurance",
+                    "Aviation Insurance",
+                    "Cyber Insurance",
+                    "Electronic Equipment Insurance",
+                    "Fidelity Bonds",
+                    "Surety Bonds",
+                ]),
+            ]),
+            "event_type": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "Any answer will be contained within the choices.",
+                "If the answer or amount or date is found, use an '=' sign before the answer or amount or date."
+                "\n".join([
+                    "event type can only belong to any one of the following"
+                    "policy_issued", 
+                    "premium_paid", 
+                    "claim_intimated", 
+                    "claim_paid",
+                ]),
+            ]),
         }
         self.ai_query_msgs = {
             "net_premium": [
@@ -103,9 +168,30 @@ class InsuranceERPLLM:
                     "donot use the values of this message as your answer."
                 ])
             ],
+            "risk_type": [
+                "\n".join([
+                    "Risk type can only belong to one of the following:",
+                    "Fire Insurance",
+                    "Homeowners Insurance",
+                    "Commercial Property Insurance",
+                    "Liability Insurance",
+                    "Auto Insurance",
+                    "Workers' Compensation Insurance",
+                    "Term Life Insurance",
+                    "Whole Life Insurance",
+                    "Universal Life Insurance",
+                    "Individual Health Insurance",
+                    "Group Health Insurance",
+                    "Medicare Supplement Insurance",
+                    "Marine Insurance",
+                    "Aviation Insurance",
+                    "Cyber Insurance",
+                    "Fidelity Bonds",
+                    "Surety Bonds",
+                ]),
+            ],
             
         }
-        self.systm_msg = "\n".join(systm_msgs)
         self.doc_chunk_size = 1000
         self.doc_chunk_overlap=100
         self.convo_chunk_size = 500
@@ -234,7 +320,7 @@ class InsuranceERPLLM:
         return formatted_results
     
     def query_from_final_results(self, similarity_search_results: dict):
-        llm = ChatOpenAI(model_name='gpt-3.5-turbo', temperature=0.0)
+        llm = ChatOpenAI(model_name='gpt-3.5-turbo', temperature=0)
         formatted_results = self.format_similarity_search_results(similarity_search_results)
 
         for key, content in formatted_results.items():
