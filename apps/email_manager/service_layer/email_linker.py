@@ -177,7 +177,8 @@ class EmailConvo:
             for an_attchmnt in attachments:
                 if an_attchmnt.name is not None:
                     relative_path = an_attchmnt.file.url.lstrip('/')
-                    attachments_dict[an_attchmnt.id] = path.join(self.root_dir, relative_path)
+                    if ".pdf" in relative_path:
+                        attachments_dict[an_attchmnt.id] = path.join(self.root_dir, relative_path)
 
 
             if next_email is not None:
