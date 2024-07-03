@@ -1,3 +1,6 @@
+from datetime import datetime
+from os import environ
+import re
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
@@ -11,8 +14,13 @@ from langchain.schema import (
 import json
 import torch
 from transformers import pipeline
-from statistics import mode, StatisticsError
+from statistics import mode
 
+from apps.risk_manager.models.policy import Policy, PolicyFile
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+
+from db_tables import Base, SQLPolicyFile
 
 class InsuranceERPLLM:
     def __init__(self):
@@ -52,6 +60,99 @@ class InsuranceERPLLM:
             "premium_paid_date": "what is the date of premium paid?",
             "claim_intimation_date": "what is the date of claim intimated?",
             "claim_paid_date": "what is the date of claim paid?",
+        }
+
+        self.convo_skip_keys = {
+            "issue_date": "issue_date",
+            "policy_number": "policy_number",
+            "covernote_number": "covernote_number",
+            "claim_number": "claim_number",
+        }
+
+        self.convo_priority_keys = {
+            "risk_type": "risk_type",
+            "event_type": "event_type",
+        }
+
+        self.queries_results = {
+            "net_premium": {
+                "value": None,
+                "type": "double"
+            },
+            "issue_date": {
+                "value": None,
+                "type": "datetime"
+            },
+            "covernote_number": {
+                "value": None,
+                "type": "string"
+            },
+            "policy_number": {
+                "value": None,
+                "type": "string"
+            },
+            "claim_number": {
+                "value": None,
+                "type": "string"
+            },
+            "customer_name": {
+                "value": None,
+                "type": "string"
+            },
+            "risk_type": {
+                "value": None,
+                "type": "string"
+            },
+            "event_type": {
+                "value": None,
+                "type": "string"
+            },
+            "sum_insured": {
+                "value": None,
+                "type": "double"
+            },
+            "premium_paid_amount": {
+                "value": None,
+                "type": "double"
+            },
+            "claim_intimation_amount": {
+                "value": None,
+                "type": "double"
+            },
+            "claim_paid_amount": {
+                "value": None,
+                "type": "double"
+            },
+            "premium_paid_date": {
+                "value": None,
+                "type": "datetime"
+            },
+            "claim_intimation_date": {
+                "value": None,
+                "type": "datetime"
+            },
+            "claim_paid_date": {
+                "value": None,
+                "type": "datetime"
+            },
+        }
+
+        self.raw_results = {
+            "net_premium": None,
+            "issue_date": None,
+            "covernote_number": None,
+            "policy_number": None,
+            "claim_number": None,
+            "customer_name": None,
+            "risk_type": None,
+            "event_type": None,
+            "sum_insured": None,
+            "premium_paid_amount": None,
+            "claim_intimation_amount": None,
+            "claim_paid_amount": None,
+            "premium_paid_date": None,
+            "claim_intimation_date": None,
+            "claim_paid_date": None,
         }
 
         self.similarity_queries = {
@@ -430,14 +531,16 @@ class InsuranceERPLLM:
             for i, content in enumerate(contents):
                 self.document_query_results[key][f"Choice {i+1}"] = content
 
-        print(json.dumps(self.document_query_results, indent=4))
-        print("Number of tokens:", len(str(self.document_query_results).split()))
+        # print(json.dumps(self.document_query_results, indent=4))
+        # print("Number of tokens:", len(str(self.document_query_results).split()))
 
     def search_convo_vector_store(self):
 
         # Retrieve and print the top three relevant chunks for each query
         results = {}
         for key, query in self.queries.items():
+            if key in self.convo_skip_keys:
+                continue
             retrieved_chunks = self.convo_vector_store.similarity_search(query, k=self.num_of_choices)
             results[key] = [text_chunk.page_content for text_chunk in retrieved_chunks] if retrieved_chunks else ["Not found"]
 
@@ -448,8 +551,8 @@ class InsuranceERPLLM:
             for i, content in enumerate(contents):
                 self.convo_query_results[key][f"Choice {i+1}"] = content
 
-        print(json.dumps(self.convo_query_results, indent=4))
-        print("Number of tokens:", len(str(self.convo_query_results).split()))
+        # print(json.dumps(self.convo_query_results, indent=4))
+        # print("Number of tokens:", len(str(self.convo_query_results).split()))
 
     def format_similarity_search_results(self, similarity_search_results):
         formatted_results = {}
@@ -475,36 +578,102 @@ class InsuranceERPLLM:
             for a_msg in self.ai_query_msgs["event_type"]:
                 messages.append(AIMessage(content=a_msg))
 
-        response = llm(messages)
-        print(response.content)
-        for a_type in self.event_types:
-            if a_type in response.content:
-                self.event_type = a_type
-        print(self.event_type)
-        print("-----")   
-        
-        for key, content in formatted_results.items():
-            # Truncate content to fit within token limits
-            if self.event_type is not None:
-                allowed_queries_keys = self.events_query_dict[self.event_type]
-                if key not in allowed_queries_keys:
-                    continue
-            else:
-                break
-
-            messages = [
-                SystemMessage(content=self.systm_query_msgs[key]),
-                HumanMessage(content=f"query: {self.queries[key]}, content: {content}"),
-            ]
-            if self.ai_query_msgs.get(key, None):
-                for a_msg in self.ai_query_msgs[key]:
-                    messages.append(AIMessage(content=a_msg))
-
+        if self.event_type is None:
             response = llm(messages)
-            print(key, response.content)
-            if key == "event_type":
+            if "404 N" not in response.content:
                 for a_type in self.event_types:
                     if a_type in response.content:
                         self.event_type = a_type
-            print(self.event_type)
-            print("-----")
+        self.queries_results["event_type"]["value"] =  self.event_type
+        for key, content in formatted_results.items():
+            # print(key, self.queries_results[key]["value"], not self.queries_results[key]["value"])
+                curr_val = self.queries_results[key]["value"]
+            # if not curr_val or (type(curr_val) is str and "404 N" in curr_val):
+                # Truncate content to fit within token limits
+                if self.event_type is not None:
+                    allowed_queries_keys = self.events_query_dict[self.event_type]
+                    if key not in allowed_queries_keys:
+                        continue
+                else:
+                    break
+
+                messages = [
+                    SystemMessage(content=self.systm_query_msgs[key]),
+                    HumanMessage(content=f"query: {self.queries[key]}, content: {content}"),
+                ]
+                if self.ai_query_msgs.get(key, None):
+                    for a_msg in self.ai_query_msgs[key]:
+                        messages.append(AIMessage(content=a_msg))
+
+                response = llm(messages)
+                if "404 N" not in response.content and (
+                    curr_val is None 
+                    or (curr_val is not None and key not in self.convo_priority_keys)
+                ):
+                    self.raw_results[key] = response.content
+                    self.queries_results[key]["value"] =  response.content
+                # print(key, self.queries_results[key])
+
+    def clean_query_results(self):
+        for key, value_dict in self.queries_results.items():
+            data_type = value_dict["type"]
+            data_value = value_dict["value"]
+            # value_dict["value"] = self.raw_results[key]
+            # continue
+            if data_value is not None and type(data_value) is str and "404 Not Found" not in data_value:
+                # Clean the data value
+                data_values = data_value.split("=")
+                cleaned_value = data_values[-1].strip().replace("'", "")
+
+                # Convert the cleaned data value to the specified type
+                if data_type == "double":
+                    try:
+                        # Extract numbers from the string using regex
+                        cleaned_value = re.sub(r'[^\d.]', '', cleaned_value)
+                        cleaned_value = float(cleaned_value)
+                    except ValueError:
+                        cleaned_value = None
+                        raise Exception
+                elif data_type == "datetime":
+                    try:
+                        # Extract date in the format YYYY-MM-DD using regex
+                        match = re.search(r'\d{4}-\d{2}-\d{2}', cleaned_value)
+                        if match:
+                            cleaned_value = datetime.strptime(match.group(), "%Y-%m-%d")
+                        else:
+                            cleaned_value = None
+                    except ValueError:
+                        cleaned_value = None
+                        raise Exception
+                elif data_type == "string":
+                    cleaned_value = str(cleaned_value)
+                
+                # Update the value in the dictionary
+                value_dict["value"] = cleaned_value
+
+    def record_data(self, file_paths: list[str]):
+        DATABASE_URL = f'postgresql://{environ.get("POSTGRES_USER")}:{environ.get("POSTGRES_PASSWORD")}@{environ.get("DB_HOST")}:{environ.get("DB_PORT")}/{environ.get("POSTGRES_DB")}'
+
+        engine = create_engine(DATABASE_URL)
+
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        if self.event_type == 'policy_issued':
+            new_policy = Policy.objects.create(
+                issue_date=self.queries_results["issue_date"]["value"],
+                number=self.queries_results["policy_number"]["value"],
+                net_premium=self.queries_results["net_premium"]["value"],
+            )
+            # /Users/mirbilal/Desktop/minsir/media/email_attachments/ADAMJEE_INSURANCE_PAYMENT_SWIFT_16.02.2024-2_ZrruCMA.pdf
+            for file_path in file_paths:
+                final_path = file_path.replace("/Users/mirbilal/Desktop/minsir/media/", "")
+                name = final_path.replace("email_attachments/", "")
+                file = SQLPolicyFile(
+                    policy_id=new_policy.id,
+                    name = name,
+                    file = final_path
+                )
+                session.add(file)
+            session.commit()
+
+

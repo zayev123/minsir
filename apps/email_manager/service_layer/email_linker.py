@@ -163,6 +163,7 @@ class EmailConvo:
         first_email = self.head_email_node
         full_convo = []
         attachments_dict = {}
+        all_files = {}
         def _get_full_convo(current_email: EmailNode):
             email_data = current_email.email_data
             full_convo.append({
@@ -179,6 +180,7 @@ class EmailConvo:
                     relative_path = an_attchmnt.file.url.lstrip('/')
                     if ".pdf" in relative_path:
                         attachments_dict[an_attchmnt.id] = path.join(self.root_dir, relative_path)
+                    all_files[an_attchmnt.id] = path.join(self.root_dir, relative_path)
 
 
             if next_email is not None:
@@ -187,7 +189,7 @@ class EmailConvo:
                 return None
         _get_full_convo(first_email)
         
-        return (full_convo, list(attachments_dict.values()))
+        return (full_convo, list(attachments_dict.values()), list(all_files.values()))
     
 # if it is of the form re, but before the re, there is one without the re, then split
 # create one key for each to email

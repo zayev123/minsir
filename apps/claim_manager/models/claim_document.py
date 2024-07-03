@@ -4,9 +4,9 @@ from apps.claim_manager.models.claim import Claim
 
 class ClaimDocument(models.Model):
     claim = models.ForeignKey(Claim, related_name='documents', on_delete=models.SET_NULL, null=True, blank=True)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    file = models.FileField(upload_to='claim_documents/')
+    file = models.FileField(upload_to='claim_documents/', null=True, blank=True)
 
     def __str__(self):
         return f"{self.name}, {self.claim}"
