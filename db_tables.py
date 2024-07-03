@@ -206,6 +206,18 @@ class SQLPremiumCredited(Base):
     def __repr__(self):
         return f"<PremiumCredited(id={self.id}, policy_id={self.policy_id})>"
 
+class SQLPremiumCreditedFile(Base):
+    __tablename__ = 'premiums_credited_files'
+    id = Column(Integer, primary_key=True)
+    premium_credited_id = Column(Integer, ForeignKey('premiums_credited.id'), nullable=True)
+    name = Column(String(255))
+    file = Column(String(255))  # Adjusted to store the file path as a string
+
+    premium_credited = relationship("SQLPremiumCredited", backref=backref("files", cascade="all, delete-orphan"))
+
+    def __repr__(self):
+        return f"<PremiumCreditedFile(id={self.id}, name={self.name})>"
+
 class SQLInsuranceLine(Base):
     __tablename__ = 'insurance_lines'
     id = Column(Integer, primary_key=True)

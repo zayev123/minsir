@@ -15,3 +15,16 @@ class PremiumCredited(models.Model):
         ordering = ['-date']
         verbose_name_plural = "       Premiums Credited"
         db_table = 'premiums_credited'
+
+class PremiumCreditedFile(models.Model):
+    premium_credited = models.ForeignKey(PremiumCredited, related_name='files', on_delete=models.CASCADE, null=True, blank=True)
+    name = models.CharField(max_length=255, null=True, blank=True)
+    file = models.FileField(upload_to='premiums_credited_files/', null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        # ordering = ['-date']
+        verbose_name_plural = "       Premium Credited Files"
+        db_table = 'premiums_credited_files'

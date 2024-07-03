@@ -16,11 +16,16 @@ import torch
 from transformers import pipeline
 from statistics import mode
 
+from apps.account_manager.models.user import User
+from apps.client_manager.models.client import Client
 from apps.risk_manager.models.policy import Policy, PolicyFile
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 
-from db_tables import Base, SQLPolicyFile
+from apps.risk_manager.models.premium_credited import PremiumCredited
+from apps.risk_manager.models.risk import Risk
+from db_tables import Base, SQLPolicyFile, SQLPremiumCreditedFile
+from django.db.models import Q
 
 class InsuranceERPLLM:
     def __init__(self):
@@ -658,18 +663,136 @@ class InsuranceERPLLM:
 
         Session = sessionmaker(bind=engine)
         session = Session()
+        net_premium = self.queries_results["net_premium"]["value"]
+        issue_date = self.queries_results["issue_date"]["value"]
+        covernote_number = self.queries_results["covernote_number"]["value"]
+        policy_number = self.queries_results["policy_number"]["value"]
+        claim_number = self.queries_results["claim_number"]["value"]
+        customer_name = self.queries_results["customer_name"]["value"]
+        risk_type = self.queries_results["risk_type"]["value"]
+        event_type = self.queries_results["event_type"]["value"]
+        sum_insured = self.queries_results["sum_insured"]["value"]
+        premium_paid_amount = self.queries_results["premium_paid_amount"]["value"]
+        claim_intimation_amount = self.queries_results["claim_intimation_amount"]["value"]
+        claim_paid_amount = self.queries_results["claim_paid_amount"]["value"]
+        premium_paid_date = self.queries_results["premium_paid_date"]["value"]
+        claim_intimation_date = self.queries_results["claim_intimation_date"]["value"]
+        claim_paid_date = self.queries_results["claim_paid_date"]["value"]
+        
+        existing_risk = None
+        existing_policy = None
+        existing_client = None
+        existing_user = None
+
+        self.event_type = "premium_paid"
         if self.event_type == 'policy_issued':
-            new_policy = Policy.objects.create(
-                issue_date=self.queries_results["issue_date"]["value"],
-                number=self.queries_results["policy_number"]["value"],
-                net_premium=self.queries_results["net_premium"]["value"],
-            )
+            if policy_number is not None:
+                existing_policy = Policy.objects.filter(number=policy_number).first()
+                if existing_policy is None:
+                    existing_policy = Policy.objects.create(
+                        issue_date=issue_date,
+                        number=policy_number,
+                        net_premium=net_premium,
+                    )
+                else:
+                    if issue_date:
+                        existing_policy.issue_date = issue_date
+                    if net_premium:
+                        existing_policy.net_premium = net_premium
+                    if policy_number:
+                        existing_policy.number = policy_number
+                    existing_policy.save()
+                    existing_risk = existing_policy.risk
+
+                if existing_risk is None:
+                    existing_risk = Risk.objects.create(
+                        sum_insured=sum_insured,
+                        type = risk_type
+                    )
+                else:
+                    if sum_insured:
+                        existing_risk.sum_insured = sum_insured
+                    if risk_type:
+                        existing_risk.type = risk_type
+                    existing_client = existing_risk.client
+                if existing_risk is not None:
+                    existing_policy.risk = existing_risk
+                    existing_policy.save()
+                if existing_client is None:
+                    if customer_name is not None:
+                        existing_client = Client.objects.filter(name=customer_name).first()
+                        if existing_client is None:
+                            existing_client = Client.objects.create(
+                                name=customer_name
+                            )
+                if existing_client is not None:
+                    existing_risk.client=existing_client
+
+                for file_path in file_paths:
+                    final_path = file_path.replace("/Users/mirbilal/Desktop/minsir/media/", "")
+                    name = final_path.replace("email_attachments/", "")
+                    file = SQLPolicyFile(
+                        policy_id=existing_policy.id,
+                        name = name,
+                        file = final_path
+                    )
+                    session.add(file)
+                session.commit()
+
+        if self.event_type == 'premium_paid':
+            existing_premium_credited: PremiumCredited = None
+            if policy_number is not None or (customer_name is not None and net_premium is not None):
+                if policy_number:
+                    existing_policy = Policy.objects.filter(number=policy_number).first()
+                if not existing_policy and customer_name is not None and net_premium is not None:
+                    existing_policy = Policy.objects.filter(
+                        Q(risk__client__name=customer_name)
+                        &Q(net_premium=net_premium)
+                    ).first()
+                if existing_policy is not None:
+                    existing_policy = Policy.objects.create(
+                        issue_date=issue_date,
+                        number=policy_number,
+                        net_premium=net_premium,
+                    )
+                    existing_risk = existing_policy.risk
+
+                if existing_policy:
+                    existing_premium_credited = PremiumCredited.objects.filter(
+                        Q(policy__number=existing_policy.number)
+                        &Q(amount=premium_paid_amount)
+                    )
+                if existing_premium_credited is None:
+                    existing_premium_credited = PremiumCredited.objects.create(
+                        policy=existing_policy,
+                        date=premium_paid_date,
+                        amount=premium_paid_amount,
+                    )
+                else:
+                    if premium_paid_date is not None and existing_premium_credited.date is None:
+                        existing_premium_credited.date = premium_paid_date
+                        existing_premium_credited.save()
+
+                for file_path in file_paths:
+                    final_path = file_path.replace("/Users/mirbilal/Desktop/minsir/media/", "")
+                    name = final_path.replace("email_attachments/", "")
+                    file = SQLPremiumCreditedFile(
+                        premium_credited_id=existing_premium_credited.id,
+                        name = name,
+                        file = final_path
+                    )
+                    session.add(file)
+                session.commit()
+                
+
+
+
             # /Users/mirbilal/Desktop/minsir/media/email_attachments/ADAMJEE_INSURANCE_PAYMENT_SWIFT_16.02.2024-2_ZrruCMA.pdf
             for file_path in file_paths:
                 final_path = file_path.replace("/Users/mirbilal/Desktop/minsir/media/", "")
                 name = final_path.replace("email_attachments/", "")
                 file = SQLPolicyFile(
-                    policy_id=new_policy.id,
+                    policy_id=existing_policy.id,
                     name = name,
                     file = final_path
                 )

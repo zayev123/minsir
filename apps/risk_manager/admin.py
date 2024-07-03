@@ -7,7 +7,7 @@ from apps.risk_manager.models.endorsement import Endorsement
 from apps.risk_manager.models.important_clause import ImportantClause
 from apps.risk_manager.models.insurance_line import InsuranceLine
 from apps.risk_manager.models.policy import Policy, PolicyFile
-from apps.risk_manager.models.premium_credited import PremiumCredited
+from apps.risk_manager.models.premium_credited import PremiumCredited, PremiumCreditedFile
 from apps.risk_manager.models.premium_debited import PremiumDebited
 from apps.risk_manager.models.quotation import Quotation
 from apps.risk_manager.models.quotation_clause import QuotationClause
@@ -57,6 +57,11 @@ class PolicyFileAdmin(admin.ModelAdmin):
 class PremiumCreditedAdmin(admin.ModelAdmin):
     list_display = ['id', 'policy', 'date', 'amount']
     search_fields = ['id', 'date']
+
+@admin.register(PremiumCreditedFile)
+class PremiumCreditedFileAdmin(admin.ModelAdmin):
+    list_display = ['id', 'premium_credited', 'name']
+    search_fields = ['id', 'name']
 
 @admin.register(PremiumDebited)
 class PremiumDebitedAdmin(admin.ModelAdmin):
