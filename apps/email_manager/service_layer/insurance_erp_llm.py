@@ -10,6 +10,8 @@ from langchain.schema import (
 )
 import json
 import torch
+from transformers import pipeline
+from statistics import mode, StatisticsError
 
 
 class InsuranceERPLLM:
@@ -50,6 +52,20 @@ class InsuranceERPLLM:
             "premium_paid_date": "what is the date of premium paid?",
             "claim_intimation_date": "what is the date of claim intimated?",
             "claim_paid_date": "what is the date of claim paid?",
+        }
+
+        self.similarity_queries = {
+            "event_type": "\n".join([
+                    "event type can only belong to any one of the following"
+                    "policy_issued", 
+                    "premium_paid", 
+                    "claim_intimated", 
+                    "claim_paid",
+                ]),
+            "customer_name": "insured name?",
+            "net_premium": "Net Premium / Premium Computation?",
+            "issue_date": "Issue date / print date?",
+            "sum_insured": "sum insured?"
         }
 
         self.systm_query_msgs = {
@@ -288,12 +304,16 @@ class InsuranceERPLLM:
             # ],
             
         }
-        self.doc_chunk_size = 1000
+        self.doc_chunk_size = 500
         self.doc_chunk_overlap=100
         self.convo_chunk_size = 500
         self.convo_chunk_overlap=100
         self.document_query_results = {}
         self.convo_query_results = {}
+        self.event_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+        self.doc_label = None
+        self.convo_label = None
+
 
     def format_string(input_string):
         import re
@@ -339,6 +359,18 @@ class InsuranceERPLLM:
 
         # Create FAISS index from all documents
         self.documents_vector_store = FAISS.from_documents(all_documents, self.embeddings_model)
+        self.all_documents = all_documents
+    
+    def label_documents(self):
+        labeled_data = []
+        for doc in self.all_documents:
+            text = doc.page_content
+            result = self.event_classifier(text, self.event_types)
+            label = result['labels'][0]
+            labeled_data.append(label)
+        if labeled_data:
+            self.doc_label = mode(labeled_data)
+        
 
     def store_convo_in_vector_store(self, convo):
         all_texts = []
@@ -357,8 +389,17 @@ class InsuranceERPLLM:
         #     print(f"Document {i} content: {doc.page_content[:200]}...")
 
         self.convo_vector_store = FAISS.from_texts(all_texts, self.embeddings_model)
+        self.texts_chunks = texts_chunks
 
-
+    def label_texts(self):
+        labeled_data = []
+        for text in self.texts_chunks:
+            result = self.event_classifier(text, self.event_types)
+            label = result['labels'][0]
+            labeled_data.append({'text': text, 'label': label})
+        if labeled_data:
+            self.convo_label = mode(labeled_data)
+    
     def get_vectors(self, vector_store):
         vectors_dict = {}
         if vector_store and vector_store.index:
@@ -372,7 +413,14 @@ class InsuranceERPLLM:
         # Retrieve and print the top three relevant chunks for each query
         results = {}
         for key, query in self.queries.items():
-            retrieved_docs = self.documents_vector_store.similarity_search(query, k=self.num_of_choices)
+            qry = None
+            similarity_query = self.similarity_queries.get(key, None)
+            # similarity_query = None
+            if similarity_query is not None:
+                qry = similarity_query
+            else:
+                qry = query
+            retrieved_docs = self.documents_vector_store.similarity_search(qry, k=self.num_of_choices)
             results[key] = [doc.page_content for doc in retrieved_docs] if retrieved_docs else ["Not found"]
 
         # Print the top three relevant chunks for each query
@@ -433,7 +481,7 @@ class InsuranceERPLLM:
             if a_type in response.content:
                 self.event_type = a_type
         print(self.event_type)
-        print("-----")        
+        print("-----")   
         
         for key, content in formatted_results.items():
             # Truncate content to fit within token limits
