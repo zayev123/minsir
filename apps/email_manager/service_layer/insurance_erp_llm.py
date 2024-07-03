@@ -684,7 +684,7 @@ class InsuranceERPLLM:
         existing_client = None
         existing_user = None
 
-        self.event_type = "premium_paid"
+        # self.event_type = "premium_paid"
         if self.event_type == 'policy_issued':
             if policy_number is not None:
                 existing_policy = Policy.objects.filter(number=policy_number).first()
@@ -784,19 +784,5 @@ class InsuranceERPLLM:
                     session.add(file)
                 session.commit()
                 
-
-
-
-            # /Users/mirbilal/Desktop/minsir/media/email_attachments/ADAMJEE_INSURANCE_PAYMENT_SWIFT_16.02.2024-2_ZrruCMA.pdf
-            for file_path in file_paths:
-                final_path = file_path.replace("/Users/mirbilal/Desktop/minsir/media/", "")
-                name = final_path.replace("email_attachments/", "")
-                file = SQLPolicyFile(
-                    policy_id=existing_policy.id,
-                    name = name,
-                    file = final_path
-                )
-                session.add(file)
-            session.commit()
 
 
