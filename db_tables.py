@@ -367,14 +367,14 @@ class SQLClaimDebited(Base):
     def __repr__(self):
         return f"<ClaimDebited(id={self.id}, claim_id={self.claim_id})>"
     
-class SQLSQLClaimDebitedFile(Base):
+class SQLClaimDebitedFile(Base):
     __tablename__ = 'claims_debited_files'
     id = Column(Integer, primary_key=True)
     claim_debited_id = Column(Integer, ForeignKey('claims_debited.id'), nullable=True)
     name = Column(String(255))
     file = Column(String(255))  # Adjusted to store the file path as a string
 
-    claim_debited = relationship("SQLSQLClaimDebited", backref=backref("files", cascade="all, delete-orphan"))
+    claim_debited = relationship("SQLClaimDebited", backref=backref("files", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return f"<ClaimDebitedFile(id={self.id}, name={self.name})>"

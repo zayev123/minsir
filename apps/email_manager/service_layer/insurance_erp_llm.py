@@ -26,7 +26,7 @@ from sqlalchemy import create_engine
 
 from apps.risk_manager.models.premium_credited import PremiumCredited
 from apps.risk_manager.models.risk import Risk
-from db_tables import Base, SQLClaimDocument, SQLPolicyFile, SQLPremiumCreditedFile, SQLSQLClaimDebitedFile
+from db_tables import Base, SQLClaimDocument, SQLPolicyFile, SQLPremiumCreditedFile, SQLClaimDebitedFile
 from django.db.models import Q
 
 class InsuranceERPLLM:
@@ -466,8 +466,12 @@ class InsuranceERPLLM:
             #     print(f"Document {i} content: {doc.page_content[:200]}...")
 
         # Create FAISS index from all documents
-        self.documents_vector_store = FAISS.from_documents(all_documents, self.embeddings_model)
-        self.all_documents = all_documents
+        try:
+            self.documents_vector_store = FAISS.from_documents(all_documents, self.embeddings_model)
+            self.all_documents = all_documents
+        except Exception as err:
+            print(err)
+            self.all_documents = []
     
     def label_documents(self):
         labeled_data = []
@@ -636,6 +640,8 @@ class InsuranceERPLLM:
                 if data_type == "double":
                     try:
                         # Extract numbers from the string using regex
+                        cleaned_value = cleaned_value.replace(',', '')
+                        cleaned_value = cleaned_value.replace('.', '') 
                         cleaned_value = re.sub(r'[^\d.]', '', cleaned_value)
                         cleaned_value = float(cleaned_value)
                     except ValueError:
@@ -852,7 +858,7 @@ class InsuranceERPLLM:
                 for file_path in file_paths:
                     final_path = file_path.replace("/Users/mirbilal/Desktop/minsir/media/", "")
                     name = final_path.replace("email_attachments/", "")
-                    file = SQLSQLClaimDebitedFile(
+                    file = SQLClaimDebitedFile(
                         claim_debited_id=existing_claim_paid.id,
                         name = name,
                         file = final_path
