@@ -17,6 +17,8 @@ from transformers import pipeline
 from statistics import mode
 
 from apps.account_manager.models.user import User
+from apps.claim_manager.models.claim import Claim
+from apps.claim_manager.models.claim_debited import ClaimDebited
 from apps.client_manager.models.client import Client
 from apps.risk_manager.models.policy import Policy, PolicyFile
 from sqlalchemy.orm import sessionmaker
@@ -24,7 +26,7 @@ from sqlalchemy import create_engine
 
 from apps.risk_manager.models.premium_credited import PremiumCredited
 from apps.risk_manager.models.risk import Risk
-from db_tables import Base, SQLPolicyFile, SQLPremiumCreditedFile
+from db_tables import Base, SQLClaimDocument, SQLPolicyFile, SQLPremiumCreditedFile, SQLSQLClaimDebitedFile
 from django.db.models import Q
 
 class InsuranceERPLLM:
@@ -741,23 +743,20 @@ class InsuranceERPLLM:
 
         if self.event_type == 'premium_paid':
             existing_premium_credited: PremiumCredited = None
-            if policy_number is not None or (customer_name is not None and net_premium is not None):
+            if policy_number is not None or (customer_name is not None and (net_premium is not None or premium_paid_amount is not None)):
                 if policy_number:
                     existing_policy = Policy.objects.filter(number=policy_number).first()
-                if not existing_policy and customer_name is not None and net_premium is not None:
+                if not existing_policy and customer_name is not None and (net_premium is not None or premium_paid_amount is not None):
                     existing_policy = Policy.objects.filter(
                         Q(risk__client__name=customer_name)
-                        &Q(net_premium=net_premium)
+                        &(
+                            Q(net_premium=net_premium)
+                            |Q(net_premium=premium_paid_amount)
+                        )
                     ).first()
-                if existing_policy is not None:
-                    existing_policy = Policy.objects.create(
-                        issue_date=issue_date,
-                        number=policy_number,
-                        net_premium=net_premium,
-                    )
-                    existing_risk = existing_policy.risk
 
                 if existing_policy:
+                    existing_risk = existing_policy.risk
                     existing_premium_credited = PremiumCredited.objects.filter(
                         Q(policy__number=existing_policy.number)
                         &Q(amount=premium_paid_amount)
@@ -778,6 +777,83 @@ class InsuranceERPLLM:
                     name = final_path.replace("email_attachments/", "")
                     file = SQLPremiumCreditedFile(
                         premium_credited_id=existing_premium_credited.id,
+                        name = name,
+                        file = final_path
+                    )
+                    session.add(file)
+                session.commit()
+        
+        if self.event_type == 'claim_intimated':
+            existing_claim_intimated: Claim = None
+            if policy_number is not None or customer_name is not None:
+                if policy_number:
+                    existing_policy = Policy.objects.filter(number=policy_number).first()
+
+                if existing_policy and claim_intimation_amount:
+                    existing_risk = existing_policy.risk
+                    existing_claim_intimated = Claim.objects.filter(
+                        Q(policy__number=existing_policy.number)
+                        &Q(cash_call_amount=claim_intimation_amount)
+                    )
+                if existing_claim_intimated is None:
+                    existing_claim_intimated = Claim.objects.create(
+                        policy=existing_policy,
+                        date_of_intimation=claim_intimation_date,
+                        cash_call_amount=claim_intimation_amount,
+                    )
+                else:
+                    if claim_intimation_date is not None and existing_claim_intimated.date_of_intimation is None:
+                        existing_claim_intimated.date_of_intimation = claim_intimation_date
+                    if claim_intimation_amount is not None and existing_claim_intimated.cash_call_amount is None:
+                        existing_claim_intimated.cash_call_amount = claim_intimation_amount
+                    existing_claim_intimated.save()
+
+                for file_path in file_paths:
+                    final_path = file_path.replace("/Users/mirbilal/Desktop/minsir/media/", "")
+                    name = final_path.replace("email_attachments/", "")
+                    file = SQLClaimDocument(
+                        claim_id=existing_claim_intimated.id,
+                        name = name,
+                        file = final_path
+                    )
+                    session.add(file)
+                session.commit()
+
+        if self.event_type == 'claim_paid':
+            existing_claim_paid: ClaimDebited = None
+            existing_claim = None
+            if policy_number is not None or customer_name is not None:
+                if policy_number:
+                    existing_policy = Policy.objects.filter(number=policy_number).first()
+                if existing_policy:
+                    existing_risk = existing_policy.risk
+                    existing_claim = Claim.objects.filter(
+                        policy__number=existing_policy.number
+                    ).first()
+
+                if existing_claim and claim_paid_amount:
+                    existing_claim_paid = ClaimDebited.objects.filter(
+                        Q(claim_id=existing_claim.id)
+                        &Q(amount=claim_paid_amount)
+                    )
+                if existing_claim_paid is None:
+                    existing_claim_paid = ClaimDebited.objects.create(
+                        claim=existing_claim,
+                        date=claim_paid_date,
+                        amount=claim_paid_amount,
+                    )
+                else:
+                    if claim_intimation_date is not None and existing_claim_paid.date_of_intimation is None:
+                        existing_claim_paid.date_of_intimation = claim_intimation_date
+                    if claim_intimation_amount is not None and existing_claim_paid.cash_call_amount is None:
+                        existing_claim_paid.cash_call_amount = claim_intimation_amount
+                    existing_claim_paid.save()
+
+                for file_path in file_paths:
+                    final_path = file_path.replace("/Users/mirbilal/Desktop/minsir/media/", "")
+                    name = final_path.replace("email_attachments/", "")
+                    file = SQLSQLClaimDebitedFile(
+                        claim_debited_id=existing_claim_paid.id,
                         name = name,
                         file = final_path
                     )

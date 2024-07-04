@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from apps.claim_manager.models.claim import Claim
 from apps.claim_manager.models.claim_credited import ClaimCredited
-from apps.claim_manager.models.claim_debited import ClaimDebited
+from apps.claim_manager.models.claim_debited import ClaimDebited, ClaimDebitedFile
 from apps.claim_manager.models.claim_document import ClaimDocument
 
 @admin.register(ClaimCredited)
@@ -24,3 +24,9 @@ class ClaimDocumentAdmin(admin.ModelAdmin):
 class ClaimAdmin(admin.ModelAdmin):
     list_display = ['id', 'policy', 'date_of_intimation', 'cash_call_amount']
     search_fields = ['id', 'date_of_intimation']
+
+
+@admin.register(ClaimDebitedFile)
+class ClaimDebitedFileAdmin(admin.ModelAdmin):
+    list_display = ['id', 'claim_debited', 'name']
+    search_fields = ['id', 'name']

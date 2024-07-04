@@ -15,3 +15,17 @@ class ClaimDebited(models.Model):
         ordering = ['-date']
         verbose_name_plural = "       Claims' Debits"
         db_table = 'claims_debited'
+
+
+class ClaimDebitedFile(models.Model):
+    claim_debited = models.ForeignKey(ClaimDebited, related_name='files', on_delete=models.CASCADE, null=True, blank=True)
+    name = models.CharField(max_length=255, null=True, blank=True)
+    file = models.FileField(upload_to='claims_debited_files/', null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        # ordering = ['-date']
+        verbose_name_plural = "       Claim Debited Files"
+        db_table = 'claims_debited_files'
