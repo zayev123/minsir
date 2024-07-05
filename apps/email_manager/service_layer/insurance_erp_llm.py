@@ -849,7 +849,7 @@ class InsuranceERPLLM:
                     existing_risk = existing_policy.risk
                     existing_client = existing_policy.client
                 if existing_client is None and existing_risk is not None and existing_risk.client is not None:
-                        existing_client = existing_risk.client
+                    existing_client = existing_risk.client
                 if existing_policy and claim_intimation_amount:
                     fltr_qry = Q(cash_call_amount=claim_intimation_amount)
                     if existing_client is not None:
@@ -868,6 +868,8 @@ class InsuranceERPLLM:
                     existing_claim_intimated = Claim.objects.filter(fltr_qry).first()
                     if existing_claim_intimated and existing_client is None:
                         existing_client = existing_claim_intimated.client
+                if existing_client is None:
+                    existing_client = existing_customer
                 if existing_claim_intimated is None:
                     existing_claim_intimated = Claim.objects.create(
                         policy=existing_policy,
