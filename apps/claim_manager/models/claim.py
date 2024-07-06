@@ -6,6 +6,7 @@ from apps.risk_manager.models.policy import Policy
 class Claim(models.Model):
     policy = models.ForeignKey(Policy, related_name='claims', on_delete=models.SET_NULL, null=True, blank=True)
     client = models.ForeignKey(Client, related_name='claims', on_delete=models.SET_NULL, null=True, blank=True)
+    company = models.ForeignKey(Client, related_name='company_claims', on_delete=models.SET_NULL, null=True, blank=True)
     number = models.CharField(max_length=255, null=True)
     date_of_intimation = models.DateTimeField(null=True)
     date_of_occurrence = models.DateTimeField(null=True)

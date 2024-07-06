@@ -6,6 +6,7 @@ from apps.risk_manager.models.risk import Risk
 class Policy(models.Model):
     risk = models.ForeignKey(Risk, related_name='policies', on_delete=models.SET_NULL, null=True, blank=True)
     client = models.ForeignKey(Client, related_name='policies', on_delete=models.SET_NULL, null=True, blank=True)
+    company = models.ForeignKey(Client, related_name='company_policies', on_delete=models.SET_NULL, null=True, blank=True)
     issue_date = models.DateTimeField(null=True)
     renewal_date = models.DateTimeField(null=True)
     number = models.CharField(max_length=255)

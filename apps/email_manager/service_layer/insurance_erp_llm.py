@@ -82,6 +82,11 @@ class InsuranceERPLLM:
             "event_type": "event_type",
         }
 
+        self.convo_equal_keys = {
+            "customer_name": "company_name",
+            "company_name": "customer_name",
+        }
+
         self.queries_results = {
             "net_premium": {
                 "value": None,
@@ -563,8 +568,8 @@ class InsuranceERPLLM:
             for i, content in enumerate(contents):
                 self.document_query_results[key][f"Choice {i+1}"] = content
 
-        print(json.dumps(self.document_query_results, indent=4))
-        print("Number of tokens:", len(str(self.document_query_results).split()))
+        # print(json.dumps(self.document_query_results, indent=4))
+        # print("Number of tokens:", len(str(self.document_query_results).split()))
 
     def search_convo_vector_store(self):
 
@@ -583,8 +588,8 @@ class InsuranceERPLLM:
             for i, content in enumerate(contents):
                 self.convo_query_results[key][f"Choice {i+1}"] = content
 
-        print(json.dumps(self.convo_query_results, indent=4))
-        print("Number of tokens:", len(str(self.convo_query_results).split()))
+        # print(json.dumps(self.convo_query_results, indent=4))
+        # print("Number of tokens:", len(str(self.convo_query_results).split()))
 
     def format_similarity_search_results(self, similarity_search_results):
         formatted_results = {}
@@ -618,7 +623,7 @@ class InsuranceERPLLM:
                         self.event_type = a_type
         self.queries_results["event_type"]["value"] =  self.event_type
         for key, content in formatted_results.items():
-                print(key, self.queries_results[key]["value"], not self.queries_results[key]["value"])
+                # print(key, self.queries_results[key]["value"], not self.queries_results[key]["value"])
                 curr_val = self.queries_results[key]["value"]
             # if not curr_val or (type(curr_val) is str and "404 N" in curr_val):
                 # Truncate content to fit within token limits
@@ -642,9 +647,15 @@ class InsuranceERPLLM:
                     curr_val is None 
                     or (curr_val is not None and key not in self.convo_priority_keys)
                 ):
+                    equal_result_key = self.convo_equal_keys.get(key,None)
+                    if equal_result_key is not None:
+                        equal_val: str = self.queries_results[equal_result_key]["value"]
+                        if equal_val is not None:
+                            if response.content.strip().lower() == equal_val.strip().lower():
+                                continue
                     self.raw_results[key] = response.content
                     self.queries_results[key]["value"] =  response.content
-                print(key, self.queries_results[key])
+                # print(key, self.queries_results[key])
 
     def clean_query_results(self):
         for key, value_dict in self.queries_results.items():
@@ -701,6 +712,7 @@ class InsuranceERPLLM:
         policy_number = self.queries_results["policy_number"]["value"]
         claim_number = self.queries_results["claim_number"]["value"]
         customer_name = self.queries_results["customer_name"]["value"]
+        company_name = self.queries_results["company_name"]["value"]
         risk_type = self.queries_results["risk_type"]["value"]
         event_type = self.queries_results["event_type"]["value"]
         sum_insured = self.queries_results["sum_insured"]["value"]
@@ -716,6 +728,8 @@ class InsuranceERPLLM:
         existing_client = None
         existing_user = None
         existing_customer = None
+        existing_firm = None
+        existing_company = None
 
         # self.event_type = "premium_paid"
         if customer_name is not None:
@@ -723,6 +737,12 @@ class InsuranceERPLLM:
             if existing_customer is None:
                 existing_customer = Client.objects.create(
                     name=customer_name
+                )
+        if company_name is not None and customer_name!=company_name:
+            existing_firm = Client.objects.filter(name=company_name).first()
+            if existing_firm is None:
+                existing_firm = Client.objects.create(
+                    name=company_name
                 )
         if self.event_type == 'policy_issued':
             if policy_number is not None:
@@ -732,9 +752,11 @@ class InsuranceERPLLM:
                         issue_date=issue_date,
                         number=policy_number,
                         net_premium=net_premium,
-                        client=existing_customer
+                        client=existing_customer,
+                        company = existing_firm
                     )
                     existing_client = existing_customer
+                    existing_company = existing_firm
                 else:
                     if existing_policy.issue_date is None and issue_date is not None:
                         existing_policy.issue_date = issue_date
@@ -746,6 +768,10 @@ class InsuranceERPLLM:
                         existing_policy.client = existing_customer
                     elif existing_policy.client is not None:
                         existing_client = existing_policy.client
+                    if existing_policy.company is None and existing_firm is not None:
+                        existing_policy.company = existing_firm
+                    elif existing_policy.company is not None:
+                        existing_company = existing_policy.company
                     existing_policy.save()
                     existing_risk = existing_policy.risk
 
@@ -753,7 +779,8 @@ class InsuranceERPLLM:
                     existing_risk = Risk.objects.create(
                         sum_insured=sum_insured,
                         type = risk_type,
-                        client=existing_client
+                        client=existing_client,
+                        company=existing_company
                     )
                 else:
                     if sum_insured and existing_risk.sum_insured is None:
@@ -762,6 +789,8 @@ class InsuranceERPLLM:
                         existing_risk.type = risk_type
                     if existing_client is not None and existing_risk.client is None:
                         existing_risk.client = existing_client
+                    if existing_company is not None and existing_risk.company is None:
+                        existing_risk.company = existing_company
                 if existing_risk is not None:
                     existing_policy.risk = existing_risk
                     existing_policy.save()
@@ -770,6 +799,11 @@ class InsuranceERPLLM:
                 if existing_client is not None:
                     existing_risk.client=existing_client
                     existing_policy.client=existing_client
+                if existing_company is None:
+                    existing_company = existing_firm
+                if existing_company is not None:
+                    existing_risk.company=existing_company
+                    existing_policy.company=existing_company
 
                 if existing_risk:
                     if existing_risk.client is None:
@@ -778,6 +812,15 @@ class InsuranceERPLLM:
                 if existing_policy:
                     if existing_policy.client is None:
                         existing_policy.client = existing_client
+                    existing_policy.save()
+
+                if existing_risk:
+                    if existing_risk.company is None:
+                        existing_risk.company = existing_company
+                    existing_risk.save()
+                if existing_policy:
+                    if existing_policy.company is None:
+                        existing_policy.company = existing_company
                     existing_policy.save()
 
                 for file_path in file_paths:
@@ -793,14 +836,18 @@ class InsuranceERPLLM:
 
         if self.event_type == 'premium_paid':
             existing_premium_credited: PremiumCredited = None
-            if policy_number is not None or (customer_name is not None and (net_premium is not None or premium_paid_amount is not None)):
+            if policy_number is not None or (
+                (customer_name is not None or company_name is not None) and (net_premium is not None or premium_paid_amount is not None)
+            ):
                 if policy_number:
                     existing_policy = Policy.objects.filter(number=policy_number).first()
-                if not existing_policy and customer_name is not None and (net_premium is not None or premium_paid_amount is not None):
+                if not existing_policy and (customer_name is not None or company_name is not None) and (net_premium is not None or premium_paid_amount is not None):
                     existing_policy = Policy.objects.filter(
                         (
                             Q(risk__client__name=customer_name)
                             |Q(client__name=customer_name)
+                            |Q(company__name=company_name)
+                            |Q(risk__company__name=company_name)
                         )
                         &(
                             Q(net_premium=net_premium)
@@ -810,9 +857,12 @@ class InsuranceERPLLM:
 
                 if existing_policy:
                     existing_client = existing_policy.client
+                    existing_company = existing_policy.company
                     existing_risk = existing_policy.risk
                     if existing_client is None:
                         existing_client = existing_risk.client
+                    if existing_company is None:
+                        existing_company = existing_risk.company
                     existing_premium_credited = PremiumCredited.objects.filter(
                         Q(policy__number=existing_policy.number)
                         &Q(amount=premium_paid_amount)
@@ -821,23 +871,36 @@ class InsuranceERPLLM:
                     existing_client = existing_premium_credited.client
                 if existing_client is None:
                     existing_client = existing_customer
+                if existing_company is None and existing_premium_credited is not None:
+                    existing_company = existing_premium_credited.company
+                if existing_company is None:
+                    existing_company = existing_firm
                 
                 if existing_policy.client is None:
                     existing_policy.client = existing_client
                 if existing_risk.client is None:
                     existing_risk.client = existing_client
+                
+                if existing_policy.company is None:
+                    existing_policy.company = existing_company
+                if existing_risk.company is None:
+                    existing_risk.company = existing_company
+
                 if existing_premium_credited is None:
                     existing_premium_credited = PremiumCredited.objects.create(
                         policy=existing_policy,
                         date=premium_paid_date,
                         amount=premium_paid_amount,
-                        client=existing_client
+                        client=existing_client,
+                        company=existing_company
                     )
                 else:
                     if premium_paid_date is not None and existing_premium_credited.date is None:
                         existing_premium_credited.date = premium_paid_date
                     if existing_client is not None and existing_premium_credited.client is None:
                         existing_premium_credited.client = existing_client
+                    if existing_company is not None and existing_premium_credited.company is None:
+                        existing_premium_credited.company = existing_company
                     existing_premium_credited.save()
 
                 if existing_risk:
@@ -851,6 +914,19 @@ class InsuranceERPLLM:
                 if existing_premium_credited:
                     if existing_premium_credited.client is None:
                         existing_premium_credited.client = existing_client
+                    existing_premium_credited.save()
+
+                if existing_risk:
+                    if existing_risk.company is None:
+                        existing_risk.company = existing_company
+                    existing_risk.save()
+                if existing_policy:
+                    if existing_policy.company is None:
+                        existing_policy.company = existing_company
+                    existing_policy.save()
+                if existing_premium_credited:
+                    if existing_premium_credited.company is None:
+                        existing_premium_credited.company = existing_company
                     existing_premium_credited.save()
                 
                 for file_path in file_paths:
@@ -872,35 +948,49 @@ class InsuranceERPLLM:
                 if existing_policy:
                     existing_risk = existing_policy.risk
                     existing_client = existing_policy.client
+                    existing_company = existing_policy.company
                 if existing_client is None and existing_risk is not None and existing_risk.client is not None:
                     existing_client = existing_risk.client
+                if existing_company is None and existing_risk is not None and existing_risk.company is not None:
+                    existing_company = existing_risk.company
                 if existing_policy or claim_intimation_amount:
                     fltr_qry = Q(cash_call_amount=claim_intimation_amount)&~Q(cash_call_amount=None)
                     if existing_policy is not None:
                         fltr_qry = fltr_qry & (
                             Q(policy__number=policy_number)
                         )
-                    elif existing_client is not None:
+                    elif existing_client is not None or existing_company is not None:
+                        cl_id = existing_client.id if existing_client else None
+                        cp_id = existing_company.id if existing_company else None
                         fltr_qry = fltr_qry & (
-                            Q(client_id=existing_client.id)
+                            Q(client_id=cl_id)
+                            |Q(company_id=cp_id)
                         )
-                    elif existing_customer is not None:
+                    elif existing_customer is not None or existing_firm is not None:
+                        cl_id = existing_customer.id if existing_customer else None
+                        cp_id = existing_firm.id if existing_firm else None
                         fltr_qry = fltr_qry & (
-                            Q(client_id=existing_customer.id)
+                            Q(client_id=cl_id)
+                            |Q(company_id=cp_id)
                         )
                     else:
                         fltr_qry = fltr_qry & Q(policy_id=-1000)
                     existing_claim_intimated = Claim.objects.filter(fltr_qry).first()
                     if existing_claim_intimated and existing_client is None:
                         existing_client = existing_claim_intimated.client
+                    if existing_claim_intimated and existing_company is None:
+                        existing_company = existing_claim_intimated.company
                 if existing_client is None:
                     existing_client = existing_customer
+                if existing_company is None:
+                    existing_company = existing_firm
                 if existing_claim_intimated is None:
                     existing_claim_intimated = Claim.objects.create(
                         policy=existing_policy,
                         date_of_intimation=claim_intimation_date,
                         cash_call_amount=claim_intimation_amount,
-                        client=existing_client
+                        client=existing_client,
+                        company=existing_company
                     )
                 else:
                     if claim_intimation_date is not None and existing_claim_intimated.date_of_intimation is None:
@@ -909,6 +999,8 @@ class InsuranceERPLLM:
                         existing_claim_intimated.cash_call_amount = claim_intimation_amount
                     if existing_client is not None and existing_claim_intimated.client is None:
                         existing_claim_intimated.client = existing_client
+                    if existing_company is not None and existing_claim_intimated.company is None:
+                        existing_claim_intimated.company = existing_company
                     existing_claim_intimated.save()
                 
                 if existing_risk:
@@ -922,6 +1014,19 @@ class InsuranceERPLLM:
                 if existing_claim_intimated:
                     if existing_claim_intimated.client is None:
                         existing_claim_intimated.client = existing_client
+                    existing_claim_intimated.save()
+
+                if existing_risk:
+                    if existing_risk.company is None:
+                        existing_risk.company = existing_company
+                    existing_risk.save()
+                if existing_policy:
+                    if existing_policy.company is None:
+                        existing_policy.company = existing_company
+                    existing_policy.save()
+                if existing_claim_intimated:
+                    if existing_claim_intimated.company is None:
+                        existing_claim_intimated.company = existing_company
                     existing_claim_intimated.save()
 
                 for file_path in file_paths:
@@ -944,8 +1049,11 @@ class InsuranceERPLLM:
                 if existing_policy:
                     existing_client = existing_policy.client
                     existing_risk = existing_policy.risk
+                    existing_company = existing_policy.company
                     if existing_risk and existing_client is None:
                         existing_client = existing_risk.client
+                    if existing_risk and existing_company is None:
+                        existing_company = existing_risk.company
                     if claim_paid_amount is not None:
                         existing_claim = Claim.objects.filter(
                             Q(policy__number=existing_policy.number)
@@ -955,6 +1063,8 @@ class InsuranceERPLLM:
                             existing_claim.settlement_amount = claim_paid_amount
                     if existing_claim and existing_client is None:
                         existing_client = existing_claim.client
+                    if existing_claim and existing_company is None:
+                        existing_company = existing_claim.company
 
                 if existing_claim and claim_paid_amount:
                     existing_claim_paid = ClaimDebited.objects.filter(
@@ -963,14 +1073,19 @@ class InsuranceERPLLM:
                     )
                     if existing_claim_paid and existing_client is None:
                         existing_client = existing_claim_paid.client
+                    if existing_claim_paid and existing_company is None:
+                        existing_company = existing_claim_paid.company
                 if existing_client is None:
                     existing_client = existing_customer
+                if existing_company is None:
+                    existing_company = existing_firm
                 if existing_claim_paid is None:
                     existing_claim_paid = ClaimDebited.objects.create(
                         claim=existing_claim,
                         date=claim_paid_date,
                         amount=claim_paid_amount,
-                        client=existing_client
+                        client=existing_client,
+                        company=existing_company
                     )
                 else:
                     if claim_paid_date is not None and existing_claim_paid.date is None:
@@ -979,6 +1094,8 @@ class InsuranceERPLLM:
                         existing_claim_paid.amount = claim_paid_amount
                     if existing_client is not None and existing_claim_paid.client is None:
                         existing_claim_paid.client = existing_client
+                    if existing_company is not None and existing_claim_paid.company is None:
+                        existing_claim_paid.company = existing_company
                     existing_claim_paid.save()
 
                 if existing_risk:
@@ -1000,6 +1117,27 @@ class InsuranceERPLLM:
                 if existing_claim_paid:
                     if existing_claim_paid.client is None:
                         existing_claim_paid.client = existing_client
+                    existing_claim_paid.save()
+
+                if existing_risk:
+                    if existing_risk.company is None:
+                        existing_risk.company = existing_company
+                    existing_risk.save()
+                if existing_policy:
+                    if existing_policy.company is None:
+                        existing_policy.company = existing_company
+                    existing_policy.save()
+                if existing_claim:
+                    if existing_claim.company is None:
+                        existing_claim.company = existing_company
+                    existing_claim.save()
+                if existing_claim:
+                    if existing_claim.company is None:
+                        existing_claim.company = existing_company
+                    existing_claim.save()
+                if existing_claim_paid:
+                    if existing_claim_paid.company is None:
+                        existing_claim_paid.company = existing_company
                     existing_claim_paid.save()
 
                 for file_path in file_paths:

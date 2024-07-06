@@ -6,6 +6,7 @@ from apps.risk_manager.models.policy import Policy
 class PremiumCredited(models.Model):
     policy = models.ForeignKey(Policy, related_name='crediteds', on_delete=models.SET_NULL, null=True, blank=True)
     client = models.ForeignKey(Client, related_name='premiums_credited', on_delete=models.SET_NULL, null=True, blank=True)
+    company = models.ForeignKey(Client, related_name='company_premiums_credited', on_delete=models.SET_NULL, null=True, blank=True)
     date = models.DateTimeField(null=True)
     amount = models.FloatField(null=True)
     payment_proof = models.FileField(upload_to='premium_credited/', null=True, blank=True)
