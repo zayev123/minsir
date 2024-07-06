@@ -16,9 +16,9 @@ class ClientStatusAdmin(admin.ModelAdmin):
     search_fields = ['id', 'current_status', 'status_changed_at']
 
 @admin.register(Client)
-class ClientAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'industry']
-    search_fields = ['id', 'user__name', 'industry']
+class ClientModelAdmin(admin.ModelAdmin):
+    list_display = ['id', "name", 'user', 'industry']
+    search_fields = ['id', "name", 'user__name', 'industry']
 
 @admin.register(Meeting)
 class MeetingAdmin(admin.ModelAdmin):

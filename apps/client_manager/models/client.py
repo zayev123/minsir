@@ -15,7 +15,7 @@ class Client(models.Model):
     notes = models.TextField()
 
     def __str__(self):
-        return self.user
+        return self.name
     
     class Meta:
         # ordering = ['-status_changed_at']

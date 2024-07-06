@@ -58,6 +58,7 @@ class InsuranceERPLLM:
             "policy_number": "What is the policy number which starts with 'PL'? Rule: It must start with 'PL'",
             "claim_number": "What is the claim number which starts with 'CL'? Rule: It must start with 'CL'",
             "customer_name": "what is the name of the customer(insured)? Hint: It will appear after the 'insured' word",
+            "company_name": "what is the name of the company(insured)? rule: the company must not have 'adamjee' in it",
             "risk_type": "what is the type of the risk?",
             "event_type": "what is the type of event?",
             "sum_insured": "what is the total sum insured?",
@@ -106,6 +107,10 @@ class InsuranceERPLLM:
                 "value": None,
                 "type": "string"
             },
+            "company_name": {
+                "value": None,
+                "type": "string"
+            },
             "risk_type": {
                 "value": None,
                 "type": "string"
@@ -151,6 +156,7 @@ class InsuranceERPLLM:
             "policy_number": None,
             "claim_number": None,
             "customer_name": None,
+            "company_name": None,
             "risk_type": None,
             "event_type": None,
             "sum_insured": None,
@@ -171,6 +177,7 @@ class InsuranceERPLLM:
                     "claim_paid",
                 ]),
             "customer_name": "insured name?",
+            "company_name": "insured company name?",
             "net_premium": "Net Premium / Premium Computation?",
             "issue_date": "Issue date / print date?",
             "sum_insured": "sum insured?"
@@ -233,6 +240,16 @@ class InsuranceERPLLM:
                 "There should be only one '=' sign in the answer if it is found.",
                 "Any answer will be contained within the choices.",
                 "If the answer is found, use an '=' sign before the answer.",
+            ]),
+            "company_name": "\n".join([
+                "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
+                f"The content data will contain {self.num_of_choices} choices for the most relevant data, you have to use a combination of the choices to answer the query.",
+                "The answer will be singular. use an '=' sign before the answer.",
+                "If you cannot find the answer easily, say the following: '404 Not Found'.",
+                "There should be only one '=' sign in the answer if it is found.",
+                "Any answer will be contained within the choices.",
+                "If the answer is found, use an '=' sign before the answer.",
+                "the company must not be 'adamjee', look for any another company."
             ]),
             "risk_type": "\n".join([
                 "You are a helpful assistant that will help the user to figure out the answer to the related query given the content-data.",
@@ -355,6 +372,7 @@ class InsuranceERPLLM:
                 "issue_date": "issue_date",
                 "net_premium": "net_premium",
                 "customer_name": "customer_name",
+                "company_name": "company_name",
                 "risk_type": "risk_type",
                 "sum_insured": "sum_insured"
             },
@@ -363,6 +381,7 @@ class InsuranceERPLLM:
                 "premium_paid_amount": "premium_paid_amount",
                 "premium_paid_date": "premium_paid_date",
                 "customer_name": "customer_name",
+                "company_name": "company_name",
                 "risk_type": "risk_type",
                 "sum_insured": "sum_insured"
             },
@@ -371,6 +390,7 @@ class InsuranceERPLLM:
                 "claim_intimation_amount": "claim_intimation_amount",
                 "claim_intimation_date": "claim_intimation_date",
                 "customer_name": "customer_name",
+                "company_name": "company_name",
                 "risk_type": "risk_type",
                 "sum_insured": "sum_insured"
             },
@@ -380,6 +400,7 @@ class InsuranceERPLLM:
                 "claim_paid_date": "claim_paid_date",
                 "claim_number": "claim_number",
                 "customer_name": "customer_name",
+                "company_name": "company_name",
                 "risk_type": "risk_type",
                 "sum_insured": "sum_insured"
             }
@@ -542,8 +563,8 @@ class InsuranceERPLLM:
             for i, content in enumerate(contents):
                 self.document_query_results[key][f"Choice {i+1}"] = content
 
-        # print(json.dumps(self.document_query_results, indent=4))
-        # print("Number of tokens:", len(str(self.document_query_results).split()))
+        print(json.dumps(self.document_query_results, indent=4))
+        print("Number of tokens:", len(str(self.document_query_results).split()))
 
     def search_convo_vector_store(self):
 
@@ -562,8 +583,8 @@ class InsuranceERPLLM:
             for i, content in enumerate(contents):
                 self.convo_query_results[key][f"Choice {i+1}"] = content
 
-        # print(json.dumps(self.convo_query_results, indent=4))
-        # print("Number of tokens:", len(str(self.convo_query_results).split()))
+        print(json.dumps(self.convo_query_results, indent=4))
+        print("Number of tokens:", len(str(self.convo_query_results).split()))
 
     def format_similarity_search_results(self, similarity_search_results):
         formatted_results = {}
@@ -597,7 +618,7 @@ class InsuranceERPLLM:
                         self.event_type = a_type
         self.queries_results["event_type"]["value"] =  self.event_type
         for key, content in formatted_results.items():
-            # print(key, self.queries_results[key]["value"], not self.queries_results[key]["value"])
+                print(key, self.queries_results[key]["value"], not self.queries_results[key]["value"])
                 curr_val = self.queries_results[key]["value"]
             # if not curr_val or (type(curr_val) is str and "404 N" in curr_val):
                 # Truncate content to fit within token limits
@@ -623,7 +644,7 @@ class InsuranceERPLLM:
                 ):
                     self.raw_results[key] = response.content
                     self.queries_results[key]["value"] =  response.content
-                # print(key, self.queries_results[key])
+                print(key, self.queries_results[key])
 
     def clean_query_results(self):
         for key, value_dict in self.queries_results.items():
@@ -641,7 +662,10 @@ class InsuranceERPLLM:
                     try:
                         # Extract numbers from the string using regex
                         cleaned_value = cleaned_value.replace(',', '')
-                        cleaned_value = cleaned_value.replace('.', '') 
+                        cleaned_value = cleaned_value.replace('RS.', '') 
+                        cleaned_value = cleaned_value.replace('Rs.', '') 
+                        cleaned_value = cleaned_value.replace('USD.', '') 
+                        cleaned_value = cleaned_value.replace('Usd.', '') 
                         cleaned_value = re.sub(r'[^\d.]', '', cleaned_value)
                         cleaned_value = float(cleaned_value)
                     except ValueError:
@@ -850,21 +874,22 @@ class InsuranceERPLLM:
                     existing_client = existing_policy.client
                 if existing_client is None and existing_risk is not None and existing_risk.client is not None:
                     existing_client = existing_risk.client
-                if existing_policy and claim_intimation_amount:
-                    fltr_qry = Q(cash_call_amount=claim_intimation_amount)
-                    if existing_client is not None:
-                        fltr_qry = fltr_qry & (
-                            (
-                                Q(policy__number=policy_number)
-                                &~Q(policy__number=None)
-                            ) 
-                            | Q(client_id=existing_client.id)
-                        )
-                    else:
+                if existing_policy or claim_intimation_amount:
+                    fltr_qry = Q(cash_call_amount=claim_intimation_amount)&~Q(cash_call_amount=None)
+                    if existing_policy is not None:
                         fltr_qry = fltr_qry & (
                             Q(policy__number=policy_number)
-                            &~Q(policy__number=None)
                         )
+                    elif existing_client is not None:
+                        fltr_qry = fltr_qry & (
+                            Q(client_id=existing_client.id)
+                        )
+                    elif existing_customer is not None:
+                        fltr_qry = fltr_qry & (
+                            Q(client_id=existing_customer.id)
+                        )
+                    else:
+                        fltr_qry = fltr_qry & Q(policy_id=-1000)
                     existing_claim_intimated = Claim.objects.filter(fltr_qry).first()
                     if existing_claim_intimated and existing_client is None:
                         existing_client = existing_claim_intimated.client
