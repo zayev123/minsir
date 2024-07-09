@@ -774,65 +774,76 @@ class InsuranceERPLLM:
                         existing_company = existing_policy.company
                     existing_policy.save()
                     existing_risk = existing_policy.risk
+            else:
+                existing_policy = Policy.objects.create(
+                    issue_date=issue_date,
+                    number=policy_number,
+                    net_premium=net_premium,
+                    client=existing_customer,
+                    company = existing_firm
+                )
+                existing_client = existing_customer
+                existing_company = existing_firm
 
-                if existing_risk is None:
-                    existing_risk = Risk.objects.create(
-                        sum_insured=sum_insured,
-                        type = risk_type,
-                        client=existing_client,
-                        company=existing_company
-                    )
-                else:
-                    if sum_insured and existing_risk.sum_insured is None:
-                        existing_risk.sum_insured = sum_insured
-                    if risk_type and existing_risk.type is None:
-                        existing_risk.type = risk_type
-                    if existing_client is not None and existing_risk.client is None:
-                        existing_risk.client = existing_client
-                    if existing_company is not None and existing_risk.company is None:
-                        existing_risk.company = existing_company
-                if existing_risk is not None:
-                    existing_policy.risk = existing_risk
-                    existing_policy.save()
-                if existing_client is None:
-                    existing_client = existing_customer
-                if existing_client is not None:
-                    existing_risk.client=existing_client
-                    existing_policy.client=existing_client
-                if existing_company is None:
-                    existing_company = existing_firm
-                if existing_company is not None:
-                    existing_risk.company=existing_company
-                    existing_policy.company=existing_company
+            if existing_risk is None:
+                existing_risk = Risk.objects.create(
+                    sum_insured=sum_insured,
+                    type = risk_type,
+                    client=existing_client,
+                    company=existing_company
+                )
+            else:
+                if sum_insured and existing_risk.sum_insured is None:
+                    existing_risk.sum_insured = sum_insured
+                if risk_type and existing_risk.type is None:
+                    existing_risk.type = risk_type
+                if existing_client is not None and existing_risk.client is None:
+                    existing_risk.client = existing_client
+                if existing_company is not None and existing_risk.company is None:
+                    existing_risk.company = existing_company
+            if existing_risk is not None:
+                existing_policy.risk = existing_risk
+                existing_policy.save()
+            if existing_client is None:
+                existing_client = existing_customer
+            if existing_client is not None:
+                existing_risk.client=existing_client
+                existing_policy.client=existing_client
+            if existing_company is None:
+                existing_company = existing_firm
+            if existing_company is not None:
+                existing_risk.company=existing_company
+                existing_policy.company=existing_company
 
-                if existing_risk:
-                    if existing_risk.client is None:
-                        existing_risk.client = existing_client
-                    existing_risk.save()
-                if existing_policy:
-                    if existing_policy.client is None:
-                        existing_policy.client = existing_client
-                    existing_policy.save()
+            if existing_risk:
+                if existing_risk.client is None:
+                    existing_risk.client = existing_client
+                existing_risk.save()
+            if existing_policy:
+                if existing_policy.client is None:
+                    existing_policy.client = existing_client
+                existing_policy.save()
 
-                if existing_risk:
-                    if existing_risk.company is None:
-                        existing_risk.company = existing_company
-                    existing_risk.save()
-                if existing_policy:
-                    if existing_policy.company is None:
-                        existing_policy.company = existing_company
-                    existing_policy.save()
+            if existing_risk:
+                if existing_risk.company is None:
+                    existing_risk.company = existing_company
+                existing_risk.save()
+            if existing_policy:
+                if existing_policy.company is None:
+                    existing_policy.company = existing_company
+                existing_policy.save()
 
-                for file_path in file_paths:
-                    final_path = file_path.replace("/Users/mirbilal/Desktop/minsir/media/", "")
-                    name = final_path.replace("email_attachments/", "")
-                    file = SQLPolicyFile(
-                        policy_id=existing_policy.id,
-                        name = name,
-                        file = final_path
-                    )
-                    session.add(file)
-                session.commit()
+            for file_path in file_paths:
+                final_path = file_path.replace("/Users/mirbilal/Desktop/minsir/media/", "")
+                name = final_path.replace("email_attachments/", "")
+                file = SQLPolicyFile(
+                    policy_id=existing_policy.id,
+                    name = name,
+                    file = final_path,
+                    created_at = datetime.now()
+                )
+                session.add(file)
+            session.commit()
 
         if self.event_type == 'premium_paid':
             existing_premium_credited: PremiumCredited = None
@@ -935,7 +946,8 @@ class InsuranceERPLLM:
                     file = SQLPremiumCreditedFile(
                         premium_credited_id=existing_premium_credited.id,
                         name = name,
-                        file = final_path
+                        file = final_path,
+                        created_at = datetime.now()
                     )
                     session.add(file)
                 session.commit()
@@ -1035,7 +1047,8 @@ class InsuranceERPLLM:
                     file = SQLClaimDocument(
                         claim_id=existing_claim_intimated.id,
                         name = name,
-                        file = final_path
+                        file = final_path,
+                        created_at = datetime.now()
                     )
                     session.add(file)
                 session.commit()
@@ -1146,7 +1159,8 @@ class InsuranceERPLLM:
                     file = SQLClaimDebitedFile(
                         claim_debited_id=existing_claim_paid.id,
                         name = name,
-                        file = final_path
+                        file = final_path,
+                        created_at = datetime.now()
                     )
                     session.add(file)
                 session.commit()

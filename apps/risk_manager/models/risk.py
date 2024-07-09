@@ -1,5 +1,6 @@
+from datetime import datetime
 from django.db import models
-
+from datetime import datetime
 from apps.client_manager.models.client import Client
 
 class Risk(models.Model):
@@ -8,6 +9,7 @@ class Risk(models.Model):
     sum_insured = models.FloatField(null=True)
     type = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True) 
 
     def __str__(self):
         return f"{self.client}, {self.type}"

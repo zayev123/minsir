@@ -1,5 +1,5 @@
 from django.db import models
-
+from datetime import datetime
 from apps.client_manager.models.client import Client
 from apps.risk_manager.models.policy import Policy
 
@@ -13,6 +13,7 @@ class Claim(models.Model):
     description = models.TextField(blank=True, null=True)
     cash_call_amount = models.FloatField(null=True)
     settlement_amount = models.FloatField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True) 
 
     def __str__(self):
         return f"{self.policy}, {self.date_of_intimation}"

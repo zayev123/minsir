@@ -1,9 +1,9 @@
+from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, sessionmaker
 from geoalchemy2 import Geography
 from sqlalchemy.dialects.postgresql import ARRAY
-from datetime import timedelta
 import re
 import json
 
@@ -187,6 +187,7 @@ class SQLPolicyFile(Base):
     policy_id = Column(Integer, ForeignKey('policies.id'), nullable=True)
     name = Column(String(255))
     file = Column(String(255))  # Adjusted to store the file path as a string
+    created_at = Column(DateTime, nullable=True)
 
     policy = relationship("SQLPolicy", backref=backref("files", cascade="all, delete-orphan"))
 
@@ -212,6 +213,7 @@ class SQLPremiumCreditedFile(Base):
     premium_credited_id = Column(Integer, ForeignKey('premiums_credited.id'), nullable=True)
     name = Column(String(255))
     file = Column(String(255))  # Adjusted to store the file path as a string
+    created_at = Column(DateTime, nullable=True)
 
     premium_credited = relationship("SQLPremiumCredited", backref=backref("files", cascade="all, delete-orphan"))
 
@@ -373,6 +375,7 @@ class SQLClaimDebitedFile(Base):
     claim_debited_id = Column(Integer, ForeignKey('claims_debited.id'), nullable=True)
     name = Column(String(255))
     file = Column(String(255))  # Adjusted to store the file path as a string
+    created_at = Column(DateTime, nullable=True)
 
     claim_debited = relationship("SQLClaimDebited", backref=backref("files", cascade="all, delete-orphan"))
 
@@ -386,6 +389,7 @@ class SQLClaimDocument(Base):
     name = Column(String(255))
     description = Column(Text, nullable=True)
     file = Column(String(255))
+    created_at = Column(DateTime, nullable=True)
 
     claim = relationship("SQLClaim", backref=backref("documents", cascade="all, delete-orphan"))
 

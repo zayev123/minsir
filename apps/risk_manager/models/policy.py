@@ -1,5 +1,5 @@
 from django.db import models
-
+from datetime import datetime
 from apps.client_manager.models.client import Client
 from apps.risk_manager.models.risk import Risk
 
@@ -9,12 +9,13 @@ class Policy(models.Model):
     company = models.ForeignKey(Client, related_name='company_policies', on_delete=models.SET_NULL, null=True, blank=True)
     issue_date = models.DateTimeField(null=True)
     renewal_date = models.DateTimeField(null=True)
-    number = models.CharField(max_length=255)
-    file = models.FileField(upload_to='policies/')
+    number = models.CharField(max_length=255, blank=True, null=True)
+    file = models.FileField(upload_to='policies/', null=True)
     description = models.TextField(blank=True, null=True)
     net_premium = models.FloatField(null=True)
     commission_type = models.CharField(max_length=255, null=True)
     commission_value = models.FloatField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True) 
 
     def __str__(self):
         return f"{self.number}, {self.risk}"
@@ -28,6 +29,7 @@ class PolicyFile(models.Model):
     policy = models.ForeignKey(Policy, related_name='files', on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=255, null=True, blank=True)
     file = models.FileField(upload_to='policy_files/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True) 
 
     def __str__(self):
         return self.name

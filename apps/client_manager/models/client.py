@@ -1,5 +1,5 @@
 from django.db import models
-
+from datetime import datetime
 from apps.account_manager.models.user import User
 from apps.agent_manager.models.agent import Agent
 
@@ -13,6 +13,7 @@ class Client(models.Model):
     connected_through = models.CharField(max_length=255, blank=True, null=True)
     follow_up_frequency_days = models.IntegerField(null=True)
     notes = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True) 
 
     def __str__(self):
         return self.name
