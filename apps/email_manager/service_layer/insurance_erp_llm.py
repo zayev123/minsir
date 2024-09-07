@@ -4,6 +4,7 @@ import re
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
+import faiss
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.chat_models import ChatOpenAI
 from langchain.schema import (
@@ -39,6 +40,7 @@ class InsuranceERPLLM:
         # Create FAISS index from documents
         self.embeddings_model = HuggingFaceEmbeddings(model_name=model_name)
         self.documents_vector_store = None
+        self.faiss_index = faiss.IndexFlatL2(768)
 
         self.num_of_choices = 3
 
@@ -561,7 +563,7 @@ class InsuranceERPLLM:
             retrieved_docs = self.documents_vector_store.similarity_search(qry, k=self.num_of_choices)
             results[key] = [doc.page_content for doc in retrieved_docs] if retrieved_docs else ["Not found"]
 
-        # Print the top three relevant chunks for each query
+        # Print the top three relevant chunks for each query lama index
         self.document_query_results = {}
         for key, contents in results.items():
             self.document_query_results[key] = {}
@@ -590,6 +592,10 @@ class InsuranceERPLLM:
 
         # print(json.dumps(self.convo_query_results, indent=4))
         # print("Number of tokens:", len(str(self.convo_query_results).split()))
+                
+    def search_specific_query(self, query):
+        retrieved_chunks = self.convo_vector_store.similarity_search(query, k=self.num_of_choices)
+        return retrieved_chunks
 
     def format_similarity_search_results(self, similarity_search_results):
         formatted_results = {}
@@ -678,6 +684,7 @@ class InsuranceERPLLM:
                         cleaned_value = cleaned_value.replace('USD.', '') 
                         cleaned_value = cleaned_value.replace('Usd.', '') 
                         cleaned_value = re.sub(r'[^\d.]', '', cleaned_value)
+                        print(cleaned_value)
                         cleaned_value = float(cleaned_value)
                     except ValueError:
                         cleaned_value = None
@@ -887,15 +894,18 @@ class InsuranceERPLLM:
                 if existing_company is None:
                     existing_company = existing_firm
                 
-                if existing_policy.client is None:
-                    existing_policy.client = existing_client
-                if existing_risk.client is None:
-                    existing_risk.client = existing_client
+                if existing_policy:
+                    if existing_policy.client is None:
+                        existing_policy.client = existing_client
+                    if existing_policy.company is None:
+                        existing_policy.company = existing_company
                 
-                if existing_policy.company is None:
-                    existing_policy.company = existing_company
-                if existing_risk.company is None:
-                    existing_risk.company = existing_company
+                if existing_risk:
+                    if existing_risk.client is None:
+                        existing_risk.client = existing_client
+                    
+                    if existing_risk.company is None:
+                        existing_risk.company = existing_company
 
                 if existing_premium_credited is None:
                     existing_premium_credited = PremiumCredited.objects.create(
