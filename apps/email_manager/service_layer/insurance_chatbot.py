@@ -12,7 +12,7 @@ from langchain.schema import HumanMessage, SystemMessage
 from apps.email_manager.service_layer.email_linker import ConversationReader
 from langchain.tools import Tool
 from langchain.memory import ConversationBufferMemory
-from langchain.agents.agent_toolkits import create_retriever_tool, create_conversational_retrieval_agent
+from langchain.agents.agent_toolkits import create_conversational_retrieval_agent
 
 class InsuranceChatbot:
     def __init__(self):
@@ -29,6 +29,8 @@ class InsuranceChatbot:
         self.formatted_convos = []
         self.openai_llm = ChatOpenAI(model_name='gpt-3.5-turbo', temperature=0)
         self.agent_executor = None
+        self.memory = None
+        self.tool = None
 
         # Ensure index is created in Elasticsearch
         if not self.es.indices.exists(index=self.doc_index_name):
@@ -384,20 +386,21 @@ class InsuranceChatbot:
         return result
     
     def create_convo_agent(self):
-        tool = Tool.from_function(
+        self.tool = Tool.from_function(
             func=self.query_from_data_source,
             name="search_emails",
             description="useful for when you need to search for new data inside the emails if you cannot find any answer yourself from the existing context"
         )
 
-        ConversationBufferMemory(
+        self.memory = ConversationBufferMemory(
             memory_key='chat_history',
-            return_messages=True
+            return_messages=True,
+            output_key="output"
         )
 
         self.agent_executor = create_conversational_retrieval_agent(
             llm=self.openai_llm,
-            tools=[tool],  # Our custom retrieval tool
+            tools=[self.tool],  # Our custom retrieval tool
             memory_key='chat_history',  # Conversational memory to hold chat history
             verbose=True
         )
