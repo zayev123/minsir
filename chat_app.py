@@ -25,7 +25,6 @@ st.set_page_config(page_title="Insurance Email Reader", page_icon="📄")
 st.header('Welcome to Insurance Email Reader, your insurance email assistant.')
 
 # Initialize chatbot instance
-print("i_am_resetting")
 ins_chatbot = InsuranceChatbot()
 
 # Define the tool for querying emails
@@ -60,7 +59,8 @@ for msg in st.session_state['messages']:
 
 # Handle user input
 user_query = st.text_input("Ask me anything about your emails!")
-
+existing_mem_len_session = 0
+existing_mem_len_agent = 0
 if user_query:
     # Display user's message
     st.session_state['messages'].append({"role": "user", "content": user_query})
@@ -70,16 +70,11 @@ if user_query:
     # Switch from `run` to `agent_executor()` to support multiple output keys.
     response = agent_executor({"input": user_query})
     st.session_state['messages'].append({"role": "assistant", "content": response['output']})
-    st.session_state['memory'].chat_memory.messages = st.session_state['memory'].chat_memory.messages + agent_executor.memory.chat_memory.messages
+    existing_mem_len_session = len(st.session_state['memory'].chat_memory.messages)
+    existing_mem_len_agent = len(agent_executor.memory.chat_memory.messages)
+    # st.session_state['memory'].chat_memory.messages = st.session_state['memory'].chat_memory.messages + agent_executor.memory.chat_memory.messages
     message(response['output'])
 
-print("")
-print("agent_list", len(agent_executor.memory.chat_memory.messages))
-for msg in agent_executor.memory.chat_memory.messages:
-    print(msg)
-print("")
-print("msg_list", len(st.session_state['memory'].chat_memory.messages), st.session_state['memory'].chat_memory.messages)
-print("")
 # Add a sidebar option to reset chat history
 if st.sidebar.button("Reset chat history"):
     st.session_state['messages'] = []

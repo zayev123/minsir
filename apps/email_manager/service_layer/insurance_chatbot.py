@@ -383,6 +383,7 @@ class InsuranceChatbot:
     def query_from_data_source(self, query):
         candidates = self.create_candidates_list(query_text=query)
         result = self.send_to_openai(email_data=candidates, query_text=query)
+        result = result + f"reference data: {candidates}"
         return result
     
     def create_convo_agent(self):
