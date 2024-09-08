@@ -8,7 +8,7 @@ from langchain.text_splitter import CharacterTextSplitter
 import os
 from langchain_community.chat_models import ChatOpenAI
 from typing import List, Dict
-from langchain.schema import HumanMessage
+from langchain.schema import HumanMessage, SystemMessage
 from apps.email_manager.service_layer.email_linker import ConversationReader
 from langchain.tools import Tool
 from langchain.memory import ConversationBufferMemory
@@ -360,7 +360,20 @@ class InsuranceChatbot:
         )
         
         # Send the formatted prompt as a HumanMessage object
-        response = self.openai_llm([HumanMessage(content=formatted_prompt)])
+        response = self.openai_llm(
+            messages=[
+                HumanMessage(content=formatted_prompt),
+                SystemMessage(
+                    content="""
+                    You are a helpful assistant will look at the emails to and from clients and give possible responses and explanations.
+                    If you can not find the answer from the searched emails, then say that you do not know.
+                    You will mention To whom and from whom the communication took place, and answer the query from the subject, the body, and the attachments of the communication.
+                    If asked about a certain person, then look at the names in the subject, the body, and the attachments, but also look at the emails and their domains i.e axy@domain.com.
+                    If you can not find the answer from the searched emails, then say that you do not know.
+                    """
+                ),
+            ]
+        )
         
         return response.content
     
