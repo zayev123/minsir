@@ -79,3 +79,5 @@ if user_query:
 if st.sidebar.button("Reset chat history"):
     st.session_state['messages'] = []
     st.session_state['memory'].clear()  # Clear memory as well
+
+# streamlit run chat_app.py
